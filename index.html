@@ -25,7 +25,17 @@
   #stage{flex:1;overflow:hidden;background:#e9e4db;display:flex;min-width:0}
   svg{width:100%;height:100%;display:block}
 
-  aside{width:336px;flex-shrink:0;background:#fff;border-left:1px solid #ddd6ca;display:flex;flex-direction:column;min-height:0}
+  aside{width:336px;flex-shrink:0;background:#fff;border-left:1px solid #ddd6ca;display:flex;flex-direction:column;min-height:0;
+        overflow:hidden;transition:opacity .18s ease}
+  /* 侧栏把手：贴在右侧边缘，侧栏收起后仍在，点一下展开 */
+  #sideToggle{position:fixed;top:50%;right:336px;transform:translateY(-50%);z-index:60;
+    width:26px;height:74px;border:1px solid #ddd6ca;border-right:none;border-radius:8px 0 0 8px;
+    background:#fffdf8;color:#7d6a4a;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:14px;line-height:1;box-shadow:-2px 0 6px rgba(0,0,0,.06);transition:right .22s ease,background .15s}
+  #sideToggle:hover{background:#f5efe2}
+  #sideToggle .arw{display:inline-block;transition:transform .22s ease}
+  body.side-closed #sideToggle .arw{transform:rotate(180deg)}
+  body.side-closed #sideToggle{right:0}
   .ptitle{padding:8px 12px;font-size:11px;font-weight:600;letter-spacing:.4px;color:#8b8378;border-bottom:1px solid #eee8de;background:#fcfaf7;flex:0 0 auto;display:flex;align-items:center;gap:6px}
   .ptitle .tab{margin-left:auto;display:flex;gap:3px}
   #panelBody{flex:1;overflow-y:auto;padding:10px 12px;min-height:0}
@@ -97,8 +107,9 @@
   </header>
   <main>
     <div id="stage"><svg id="svg" preserveAspectRatio="xMidYMid meet"></svg></div>
-    <aside>
-      <div class="ptitle">属性 / 元素<span class="tab"><button class="sm" id="tabElem">元素</button><button class="sm" id="tabLight">灯表</button></span></div>
+    <button id="sideToggle" title="收起 / 展开侧栏（快捷键 Tab）"><span class="arw">▶</span></button>
+    <aside id="side">
+      <div class="ptitle">属性 / 元素<span class="tab"><button class="sm" id="tabElem">元素</button><button class="sm" id="tabLight">灯表</button><button class="sm" id="btnSideHide" title="收起侧栏">收起 ›</button></span></div>
       <div id="panelBody"></div>
       <div id="warn"></div>
       <div class="legend">
@@ -115,6 +126,34 @@
 <script>
 (function(){
 "use strict";
+
+/* ══════════════ 侧栏收起 / 展开 ══════════════ */
+const SIDE_KEY = 'cherry-studio-sidecollapsed';
+const SIDE_W = 336;
+function setSide(closed){
+  const aside=document.getElementById('side');
+  const tg=document.getElementById('sideToggle');
+  const arw=document.querySelector('#sideToggle .arw');
+  // 直接写内联宽度：不依赖 class 优先级，收起/展开一定生效
+  aside.style.width = closed ? '0px' : SIDE_W+'px';
+  aside.style.minWidth = closed ? '0px' : '';
+  aside.style.borderLeft = closed ? 'none' : '';
+  aside.style.opacity = closed ? '0' : '1';
+  aside.style.pointerEvents = closed ? 'none' : '';
+  if(tg) tg.style.right = (closed ? 0 : SIDE_W)+'px';
+  if(arw) arw.textContent = closed ? '◀' : '▶';
+  document.body.classList.toggle('side-closed', closed);
+  try{ localStorage.setItem(SIDE_KEY, closed?'1':'0'); }catch(e){}
+}
+function toggleSide(){
+  setSide(!document.body.classList.contains('side-closed'));
+}
+document.getElementById('sideToggle').addEventListener('click', toggleSide);
+document.getElementById('btnSideHide').addEventListener('click', toggleSide);
+document.addEventListener('keydown', e=>{
+  if(e.key==='Tab' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)){ e.preventDefault(); toggleSide(); }
+});
+try{ if(localStorage.getItem(SIDE_KEY)==='1') setSide(true); }catch(e){}
 
 /* ══════════════ 店铺参数（全部可调） ══════════════ */
 const SHOP0 = {
@@ -230,7 +269,7 @@ let dimSel = null;
 let showGrid=true, showDim=true, showAisle=true, showRef=false;
 let panelMode = 'elem';
 const SNAP = 25;
-const LS_KEY = 'cherry-studio-plan-v18';
+const LS_KEY = 'cherry-studio-plan-v20';
 
 /* ══════════════ SVG ══════════════ */
 const svg = document.getElementById('svg');
