@@ -122,12 +122,15 @@ const SHOP0 = {
   D: 6836,          // 进深（后墙→临街门面）
   H: 3000,          // 吊顶完成面高度（平顶）
   ARC: 500,         // 左下弧形转角半径
-  /* 门面分格按实拍像素测量重算（照片 x171-830 为玻璃立面，拉手 x910 为门扇自由边）：
-     左固定玻璃 1500 ＋ 玻璃门 900 ＋ 右窄固定玻璃 150，右侧确有这条窄固定玻璃 */
-  GX1: 620,         // 玻璃幕墙起点 X（左砖柱内边）
-  GX2: 3170,        // 玻璃幕墙终点 X（右窄固定玻璃外边）
-  DX1: 2120,        // 玻璃门洞左
-  DX2: 3020,        // 玻璃门洞右
+  /* 门面分格：以「玻璃门中心 = 店宽 6/8」为基准反推（用户 12:50 确认门在靠右侧 2/8 位置）。
+     店宽 4748 → 门中心 3561；门 900 → 门左 3111、门右 4011。
+     左固玻 1500（实拍比例），玻璃起 1611；右窄固玻 150（用户 12:30 确认门右侧有窄固定玻璃）。
+     这些只是初始值，面板里直接改「宽度」即可，改一处其余自动重算。 */
+  DOOR_CENTER_RATIO: 0.75,  // 玻璃门中心在店宽的位置：距右边 2/8（= 从左数 6/8）
+  GX1: 1611,        // 玻璃幕墙起点 X（左砖柱内边）
+  GX2: 4161,        // 玻璃幕墙终点 X（右窄固定玻璃外边 = 门右4011 + 150）
+  DX1: 3111,        // 玻璃门洞左
+  DX2: 4011,        // 玻璃门洞右
   WY1: 3000,        // 左墙铁栅窗起点 Y
   WY2: 4300,        // 左墙铁栅窗终点 Y
   MY1: 5700,        // 右墙金属门起点 Y
@@ -219,7 +222,7 @@ let dimSel = null;
 let showGrid=true, showDim=true, showAisle=true, showRef=false;
 let panelMode = 'elem';
 const SNAP = 25;
-const LS_KEY = 'cherry-studio-plan-v8';
+const LS_KEY = 'cherry-studio-plan-v14';
 
 /* ══════════════ SVG ══════════════ */
 const svg = document.getElementById('svg');
@@ -270,7 +273,7 @@ function drawBase(){
   /* 三块玻璃的分格竖线：左固玻 | 门 | 右窄固玻 */
   [SHOP.GX1,SHOP.DX1,SHOP.DX2,SHOP.GX2].forEach(x=>{
     const major=(x===SHOP.GX1||x===SHOP.GX2);
-    mk('line',{x1:x,y1:D-110,x2:x,y2:D+110,stroke:major?'#4a443c':'#5b7c8c','stroke-width':major?20:14},gFloor);
+    mk('line',{x1:x,y1:D-150,x2:x,y2:D+150,stroke:major?'#4a443c':'#4d7f9c','stroke-width':major?22:16},gFloor);
   });
 
   // 门扇
@@ -295,10 +298,19 @@ function drawBase(){
 
   // 门面文字
   const g1w=SHOP.DX1-SHOP.GX1, g2w=SHOP.GX2-SHOP.DX2;
-  tx(gFloor,(SHOP.GX1+SHOP.DX1)/2,D+180,`固玻 ${g1w}`,{fill:'#4d7f9c','font-size':62,'text-anchor':'middle','font-weight':600});
+  if(g1w>200) tx(gFloor,(SHOP.GX1+SHOP.DX1)/2,D+180,`固玻 ${g1w}`,{fill:'#4d7f9c','font-size':62,'text-anchor':'middle','font-weight':600});
   tx(gFloor,(SHOP.DX1+SHOP.DX2)/2,D+180,`门 ${SHOP.DX2-SHOP.DX1}`,{fill:'#3f7391','font-size':62,'text-anchor':'middle','font-weight':700});
-  if(g2w>60) tx(gFloor,(SHOP.DX2+(SHOP.DX2+SHOP.GX2))/2,D+180,`窄${g2w}`,{fill:'#4d7f9c','font-size':52,'text-anchor':'middle','font-weight':600});
-  if(SHOP.W>SHOP.GX2) tx(gFloor,(SHOP.GX2+SHOP.W)/2,D+330,'瓷砖墙·招牌',{fill:'#8b8378','font-size':58,'text-anchor':'middle'});
+  /* 右窄固玻只有 60–150mm：段内放不下字，且门扇开启弧线正好在这附近，
+     所以把标注引到门面「外侧」（D+ 方向）、水平拉开，避开开门弧和通道虚线。 */
+  if(g2w>20){
+    const nx=(SHOP.DX2+SHOP.GX2)/2;
+    mk('line',{x1:nx,y1:D+40,x2:SHOP.DX2+120,y2:D+300,stroke:'#5b7c8c','stroke-width':6},gFloor);
+    mk('circle',{cx:nx,cy:D+40,r:10,fill:'#5b7c8c'},gFloor);
+    tx(gFloor,SHOP.DX2+150,D+340,`窄固玻 ${g2w}`,{fill:'#4d7f9c','font-size':52,'font-weight':600});
+  }
+  /* 瓷砖墙·招牌 竖排进墙带内部（不再占底部尺寸行），底部只留玻璃三段标注 */
+  if(SHOP.W-SHOP.GX2>200) tx(gFloor,(SHOP.GX2+SHOP.W)/2,D-210,'瓷砖墙·招牌',
+    {fill:'#8b8378','font-size':54,'text-anchor':'middle','writing-mode':'tb','letter-spacing':6});
 
   tx(gFloor,W/2,-170,'▲ 后墙（店内最里侧）',{fill:'#a39a8d','font-size':84,'text-anchor':'middle','font-weight':700});
   tx(gFloor,W/2,D+470,'▼ 临街玻璃门面',{fill:'#a39a8d','font-size':84,'text-anchor':'middle','font-weight':700});
@@ -698,9 +710,20 @@ function drawDims(){
   chain('ARC',0,SHOP.D+90,SHOP.ARC,SHOP.D+90,'R'+SHOP.ARC);
   /* 尺寸链：150 的窄固玻太窄，尺寸数字会与相邻 1578 叠在一起，
      改为在窄玻璃下方单独用文字标（“窄150”），链上只标三段主尺寸 */
+  /* 玻璃三段完整尺寸链：1500 + 900 + 150 闭合。
+     150 太窄，把它的数字引到下一行（D+230），避免和相邻数字挤在一起。 */
   chain('G1',SHOP.GX1,SHOP.D+90,SHOP.DX1,SHOP.D+90,String(SHOP.DX1-SHOP.GX1));
   chain('DOOR',SHOP.DX1,SHOP.D+90,SHOP.DX2,SHOP.D+90,String(SHOP.DX2-SHOP.DX1));
-  chain('G3',SHOP.GX2,SHOP.D+90,SHOP.W,SHOP.D+90,String(SHOP.W-SHOP.GX2));
+  if(SHOP.GX2-SHOP.DX2>20){
+    const g2a=SHOP.DX2, g2b=SHOP.GX2;
+    const gy=SHOP.D+235;
+    mk('line',{x1:g2a,y1:gy,x2:g2b,y2:gy,stroke:'#b3a894','stroke-width':7},gDim);
+    [[g2a,gy],[g2b,gy]].forEach(([x,y])=>mk('line',{x1:x-22,y1:y-22,x2:x+22,y2:y+22,stroke:'#b3a894','stroke-width':7},gDim));
+    mk('line',{x1:g2a,y1:SHOP.D+90,x2:g2a,y2:gy+16,stroke:'#c9bfae','stroke-width':4,'stroke-dasharray':'18 14'},gDim);
+    mk('line',{x1:g2b,y1:SHOP.D+90,x2:g2b,y2:gy+16,stroke:'#c9bfae','stroke-width':4,'stroke-dasharray':'18 14'},gDim);
+    tx(gDim,g2b+34,gy+22,String(SHOP.GX2-SHOP.DX2),{fill:'#7d7466','font-size':64,'font-weight':600,
+      'paint-order':'stroke',stroke:'#fff','stroke-width':10,'stroke-opacity':.92});
+  }
 }
 
 function snap(v){return Math.round(v/SNAP)*SNAP;}
@@ -819,15 +842,16 @@ function renderPanel(){
         <div class="frow narrow"><label>弧R</label><input type="number" id="s_ARC" value="${SHOP.ARC}" step="50"><span class="unit"></span></div>
         <div class="frow narrow"><label>门角</label><input type="number" id="s_DA" value="${SHOP.DOOR_ANG}" step="5"><span class="unit">°</span></div>
       </div>
-      <div class="sec">玻璃幕墙 / 门洞</div>
+      <div class="sec">玻璃幕墙 / 门洞（改宽度，其余自动重算）</div>
       <div class="g2">
-        <div class="frow narrow"><label>玻璃起</label><input type="number" id="s_GX1" value="${SHOP.GX1}" step="25"><span class="unit">mm</span></div>
-        <div class="frow narrow"><label>玻璃止</label><input type="number" id="s_GX2" value="${SHOP.GX2}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>左固玻宽</label><input type="number" id="s_WG1" value="${SHOP.DX1-SHOP.GX1}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>玻璃门宽</label><input type="number" id="s_WD" value="${SHOP.DX2-SHOP.DX1}" step="25"><span class="unit">mm</span></div>
       </div>
       <div class="g2">
-        <div class="frow narrow"><label>门左</label><input type="number" id="s_DX1" value="${SHOP.DX1}" step="25"><span class="unit">mm</span></div>
-        <div class="frow narrow"><label>门右</label><input type="number" id="s_DX2" value="${SHOP.DX2}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>右窄玻宽</label><input type="number" id="s_WG2" value="${SHOP.GX2-SHOP.DX2}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>门中心距右</label><input type="number" id="s_DCR" value="${((1-SHOP.DOOR_CENTER_RATIO)*8).toFixed(2)}" step="0.125"><span class="unit">/8</span></div>
       </div>
+      <div class="hint" style="margin:-2px 0 8px">门中心距右边 2/8 = 靠右摆。当前门中心 X = <b>${Math.round((SHOP.DX1+SHOP.DX2)/2)}</b> mm（距右 <b>${((1-(SHOP.DX1+SHOP.DX2)/2/SHOP.W)*8).toFixed(2)}/8</b>，距左 ${((SHOP.DX1+SHOP.DX2)/2/SHOP.W*8).toFixed(2)}/8）</div>
       <div class="sec">左墙窗 / 右墙金属门</div>
       <div class="g2">
         <div class="frow narrow"><label>窗起</label><input type="number" id="s_WY1" value="${SHOP.WY1}" step="25"><span class="unit">mm</span></div>
@@ -885,11 +909,46 @@ function bindInputs(){
     num('f_oh',v=>{t.overhang=Math.max(0,v); if(t.d>t.w) t.d=t.rail+t.overhang*2; else t.w=t.rail+t.overhang*2;});
   }
 
-  num('s_W',v=>SHOP.W=Math.max(1000,v)); num('s_D',v=>SHOP.D=Math.max(1000,v));
+  num('s_W',v=>{const c=curGlass(); SHOP.W=Math.max(1000,v);
+    relayoutGlass(c.g1,c.dw,c.g2,c.r);});
+  num('s_D',v=>SHOP.D=Math.max(1000,v));
   num('s_H',v=>SHOP.H=Math.max(1200,v)); num('s_ARC',v=>SHOP.ARC=Math.max(0,v));
   num('s_DA',v=>SHOP.DOOR_ANG=Math.max(0,Math.min(90,v)));
-  num('s_GX1',v=>SHOP.GX1=v); num('s_GX2',v=>SHOP.GX2=v);
-  num('s_DX1',v=>SHOP.DX1=v); num('s_DX2',v=>SHOP.DX2=v);
+  /* 玻璃分格联动：以「左固玻宽 / 门宽 / 右窄玻宽 / 门中心」四个量互相约束，
+     任何一项改动都反推出 GX1、DX1、DX2、GX2，保证所有竖线和尺寸数字同步重算。
+     门中心移动时：门宽不变，左右固玻按原比例吸收剩余空间。 */
+  /* 无状态重算：每次都用「门中心 + 门宽 + 左固玻宽 + 右窄玻宽」四个量
+     从头推出 GX1/DX1/DX2/GX2，不读取上一轮残留的中间变量，避免越改越偏。 */
+  const relayoutGlass=(g1w,doorW,g2w,ratio)=>{
+    const W=SHOP.W;
+    g1w=Math.max(150,Math.min(W-400,g1w));
+    g2w=Math.max(40, Math.min(W-400,g2w));
+    doorW=Math.max(500,Math.min(W-g1w-g2w-100,doorW));
+    ratio=Math.max(0.05,Math.min(0.95,ratio));
+    // 门中心按ratio定位，四舍五入到 5mm
+    const c=Math.round(W*ratio/5)*5;
+    let dx1=c-doorW/2, dx2=c+doorW/2;
+    // 若某一侧越界，则整组内推，但保持各段宽度不变
+    if(dx1-g1w<0)      { dx1=g1w;           dx2=dx1+doorW; }
+    if(dx2+g2w>W)      { dx2=W-g2w;         dx1=dx2-doorW; }
+    if(dx1<g1w){ g1w=Math.max(150,dx1); }
+    SHOP.DX1=Math.round(dx1); SHOP.DX2=Math.round(dx2);
+    SHOP.GX1=Math.max(0,Math.round(dx1-g1w));
+    SHOP.GX2=Math.min(W,Math.round(dx2+g2w));
+    // 回写实际值，面板下次渲染用它
+    SHOP.WG1=SHOP.DX1-SHOP.GX1;
+    SHOP.WG2=SHOP.GX2-SHOP.DX2;
+    SHOP.WD =SHOP.DX2-SHOP.DX1;
+    SHOP.DOOR_CENTER_RATIO=(SHOP.DX1+SHOP.DX2)/2/W;
+  };
+  const curGlass=()=>({
+    g1:SHOP.DX1-SHOP.GX1, dw:SHOP.DX2-SHOP.DX1, g2:SHOP.GX2-SHOP.DX2,
+    r:SHOP.DOOR_CENTER_RATIO!=null?SHOP.DOOR_CENTER_RATIO:((SHOP.DX1+SHOP.DX2)/2/SHOP.W)
+  });
+  num('s_WG1',v=>{const c=curGlass(); relayoutGlass(v,c.dw,c.g2,c.r);});
+  num('s_WD', v=>{const c=curGlass(); relayoutGlass(c.g1,v,c.g2,c.r);});
+  num('s_WG2',v=>{const c=curGlass(); relayoutGlass(c.g1,c.dw,v,c.r);});
+  num('s_DCR',v=>{const c=curGlass(); relayoutGlass(c.g1,c.dw,c.g2,1-v/8);});
   num('s_WY1',v=>SHOP.WY1=v); num('s_WY2',v=>SHOP.WY2=v);
   num('s_MY1',v=>SHOP.MY1=v); num('s_MY2',v=>SHOP.MY2=v);
   num('l_off',v=>LG.wallOff=v); num('l_sp',v=>LG.spacing=Math.max(200,v));
