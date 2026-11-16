@@ -166,8 +166,16 @@ const ITEMS0 = [
   { id:'fit', name:'试衣间', x:0, y:1200, w:1800, d:1200, h:2400, src:'guess', color:'#efe0b4',
     note:'卫生间正下方，同样深 1200、宽 1800。正面挂布帘朝店内开，内装 4000K 灯。' },
 
-  { id:'cash', name:'收银台', x:3348, y:0, w:1400, d:600, h:1050, src:'buy', color:'#f7f2e8',
-    note:'已购 140×60×105cm。贴右上角：右靠右墙、后靠后墙。店员站位在台前（店内一侧）。' },
+  /* 收银台：右靠右墙，从后墙前移 1250mm。
+     为什么是 1250：坐人需要的深度 = 凳子/人体 700 + 起身后退 400 + 余量 150。
+     原来只留 700，凳子 520 塞进去上下只剩几十毫米，人是进不去的。
+     台面 1050 高配高脚凳（坐高 650），膝盖在台下 350 净空。 */
+  { id:'cash', name:'收银台', x:3348, y:1250, w:1400, d:600, h:1050, src:'buy', color:'#f7f2e8',
+    note:'已购 140×60×105cm。右靠右墙，距后墙 1250 留座位区。台上 1050 配高脚凳坐高 650，台下留 350 容膝。' },
+
+  /* 店员座位：收银台与后墙之间的坐人区，570×570 是能转身进出的最小尺寸 */
+  { id:'seat', name:'店员座位', x:3560, y:120, w:600, d:620, h:650, src:'std', color:'#e8e2d5', seat:true,
+    note:'收银台后座位区 600×620（人体+凳子+起身余量）。这块必须留空、不能堆货，否则人坐不进去。' },
 
   /* 全身镜：1m 宽，斜 45° 架在左下弧角，镜面朝店内（右上方向）。
      人站在镜前约 800mm 的空地上，面朝角落，背后是临街玻璃——街光打在背上当轮廓，
@@ -177,25 +185,25 @@ const ITEMS0 = [
     note:'1m 宽落地镜，左下弧角斜 38° 摆放，镜面朝店内（面向店中央）。人站在镜前 x1150,y5480 的空地上照全身，背后是店内纵深、不背光；镜前两只射灯打在镜面反射补脸。这样既不占门口通道，也不用挤在弧墙边。' },
 
   // ——— 左墙：两个衣架（1.5m + 1m）———
-  { id:'hL1', name:'衣架 150×150', x:0, y:2525, w:450, d:1800, h:1500, src:'buy', color:'#cda87a',
-    rail:1500, overhang:150,
-    note:'已购 150×150（矮架 1500 高）。放左墙上段，杆长 1500，两端挂衣各外扩 150，占墙 1800。' },
+  { id:'hL1', name:'衣架 150×150', x:0, y:2525, w:450, d:1500, h:1500, src:'buy', color:'#cda87a',
+    rail:1500, overhang:0,
+    note:'已购 150×150（矮架 1500 高）。占地就是实物尺寸 1500×450，不外扩。' },
 
-  { id:'hL2', name:'衣架 100×170', x:0, y:4425, w:450, d:1300, h:1700, src:'buy', color:'#b9c9a0',
-    rail:1000, overhang:150,
-    note:'已购 100×170。放左墙下段靠窗处，杆长 1000，占墙 1300。窗户被挡一部分没关系。' },
+  { id:'hL2', name:'衣架 100×170', x:0, y:4125, w:450, d:1000, h:1700, src:'buy', color:'#b9c9a0',
+    rail:1000, overhang:0,
+    note:'已购 100×170。占地 1000×450，不外扩。窗户被挡一部分没关系。' },
 
   // ——— 右墙：两个 2m 衣架 ———
-  { id:'hR1', name:'衣架 200×170 ①', x:4298, y:650, w:450, d:2300, h:1700, src:'buy', color:'#cda87a',
-    rail:2000, overhang:150,
-    note:'已购 200×170。靠后墙这一侧，杆长 2000，占墙 2300，垂直墙面占 450。' },
+  { id:'hR1', name:'衣架 200×170 ①', x:4298, y:1850, w:450, d:2000, h:1700, src:'buy', color:'#cda87a',
+    rail:2000, overhang:0,
+    note:'已购 200×170。占地 2000×450，不外扩。上端从 1850 起，让出收银台和座位区。' },
 
-  { id:'hR2', name:'衣架 200×170 ②', x:4298, y:3060, w:450, d:2300, h:1700, src:'buy', color:'#cda87a',
-    rail:2000, overhang:150,
-    note:'已购 200×170。与①留 100 缝。两架合计占右墙 4700。' },
+  { id:'hR2', name:'衣架 200×170 ②', x:4298, y:3850, w:450, d:2000, h:1700, src:'buy', color:'#cda87a',
+    rail:2000, overhang:0,
+    note:'已购 200×170。占地 2000×450，与①首尾相接成 4m 连续挂衣带，中间不留缝（留缝会有灯落在缝里空照）。' },
 
   // ——— 金属门后：常闭，做储物 ———
-  { id:'store', name:'门后储物架', x:4298, y:5500, w:450, d:1200, h:1800, src:'std', color:'#e0dbc8',
+  { id:'store', name:'门后储物架', x:4298, y:5900, w:450, d:936, h:1800, src:'std', color:'#e0dbc8',
     note:'金属门常闭不再通行，门后这段墙做储物：存货、备货、包装袋、蒸汽挂烫机。不用留通道。' },
 
   // ——— 中央家具组 ———
@@ -222,7 +230,7 @@ let dimSel = null;
 let showGrid=true, showDim=true, showAisle=true, showRef=false;
 let panelMode = 'elem';
 const SNAP = 25;
-const LS_KEY = 'cherry-studio-plan-v14';
+const LS_KEY = 'cherry-studio-plan-v18';
 
 /* ══════════════ SVG ══════════════ */
 const svg = document.getElementById('svg');
@@ -415,9 +423,12 @@ function computeLights(){
     add(lx+680,  sy-120, LG.beamSpot, '镜前补光');
   }
 
-  /* 收银台：1 只，靠左半段，避开右墙衣架灯列 */
+  /* 收银台：1 只照台面，另 1 只照座位口袋（店员要能看清钱和货） */
   const ca=ITEMS.find(i=>i.id==='cash');
-  if(ca) add(ca.x+ca.w*0.28, ca.y+ca.d+520, LG.beamGen, '收银台');
+  if(ca){
+    add(ca.x+ca.w*0.30, ca.y+ca.d+480, LG.beamGen, '收银台');
+    add(ca.x+ca.w*0.70, ca.y-560,     LG.beamGen, '收银座位');
+  }
 
   /* 试衣间 / 卫生间 */
   const ft=ITEMS.find(i=>i.id==='fit');
@@ -587,6 +598,17 @@ function drawItems(){
       'font-size':isSel?fs:fs*0.88,'text-anchor':'middle','font-weight':isSel?700:500,
       'paint-order':'stroke',stroke:'#fff','stroke-width':11,'stroke-opacity':.9});
     if(vertical) t.setAttribute('transform',`rotate(-90 ${cx} ${cy})`);
+
+    /* 店员座位：画成圆凳 + 面朝方向，一眼看出这里是坐人的 */
+    if(it.seat){
+      const ccx=it.x+it.w/2, ccy=it.y+it.d/2, cr=Math.min(it.w,it.d)*0.42;
+      mk('circle',{cx:ccx,cy:ccy,r:cr,fill:'#f5efe2',stroke:'#b9a98d','stroke-width':12},g);
+      mk('circle',{cx:ccx,cy:ccy,r:cr*0.55,fill:'#e8dcc4',stroke:'#c9b898','stroke-width':6},g);
+      // 面朝店内（向下 = 门面方向）
+      mk('path',{d:`M ${ccx-46} ${ccy+cr*0.55} L ${ccx+46} ${ccy+cr*0.55} L ${ccx} ${ccy+cr*0.55+62} Z`,
+        fill:'#a89476'},g);
+      tx(g,ccx,ccy+14,'坐',{fill:'#7d6a4a','font-size':54,'text-anchor':'middle','font-weight':700});
+    }
 
     /* 全身镜：镜面朝店内，标出站位 */
     if(it.id==='mirror'){
@@ -820,9 +842,8 @@ function renderPanel(){
         h+=`<div class="sec">挂衣参数</div>
           <div class="g2">
             <div class="frow narrow"><label>杆长</label><input type="number" id="f_rail" value="${it.rail}" step="50"><span class="unit">mm</span></div>
-            <div class="frow narrow"><label>外扩</label><input type="number" id="f_oh" value="${it.overhang}" step="25"><span class="unit">mm</span></div>
           </div>
-          <div class="hint">挂衣后占墙 = 杆长 + 2×外扩 = <b>${it.rail+it.overhang*2}</b>mm</div>`;
+          <div class="hint">占地按实物尺寸 = <b>${it.rail}</b>mm，不外扩</div>`;
       }
     }else{
       h+=`<div class="sec">区块尺寸</div>
@@ -905,8 +926,8 @@ function bindInputs(){
     num('f_x',v=>t.x=v); num('f_y',v=>t.y=v);
     num('f_w',v=>t.w=Math.max(60,v)); num('f_d',v=>t.d=Math.max(50,v));
     num('f_h',v=>t.h=Math.max(0,v));
-    num('f_rail',v=>{t.rail=Math.max(200,v); if(t.d>t.w) t.d=t.rail+t.overhang*2; else t.w=t.rail+t.overhang*2;});
-    num('f_oh',v=>{t.overhang=Math.max(0,v); if(t.d>t.w) t.d=t.rail+t.overhang*2; else t.w=t.rail+t.overhang*2;});
+    num('f_rail',v=>{t.rail=Math.max(200,v); t.overhang=0;
+                     if(t.d>t.w) t.d=t.rail; else t.w=t.rail;});
   }
 
   num('s_W',v=>{const c=curGlass(); SHOP.W=Math.max(1000,v);
@@ -1087,7 +1108,7 @@ document.getElementById('btnCsv').onclick=()=>{
   const SRC={cad:'图上标注',std:'行业标准',guess:'待确认',fix:'固定结构',buy:'已购实物'};
   const rows=[['元素','宽mm','深mm','高mm','距左墙X','距后墙Y','杆长','占墙','来源','说明']];
   ITEMS.filter(i=>!i.isRef).forEach(i=>{
-    rows.push([i.name,i.w,i.d,i.h,i.x,i.y,i.rail||'',i.rail?i.rail+i.overhang*2:'',SRC[i.src],(i.note||'').replace(/,/g,'，').replace(/\n/g,' ')]);
+    rows.push([i.name,i.w,i.d,i.h,i.x,i.y,i.rail||'',i.rail?i.rail:'',SRC[i.src],(i.note||'').replace(/,/g,'，').replace(/\n/g,' ')]);
   });
   rows.push([]);
   rows.push(['—— 灯位清单 ——']);
