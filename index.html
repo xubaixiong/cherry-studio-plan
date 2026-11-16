@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cherry Studio · 平面与灯位图（全参数可调）</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f4f1ec;color:#2f2b26;font-size:13px}
+  #app{display:flex;flex-direction:column;height:100%}
+
+  header{display:flex;align-items:center;gap:10px;padding:7px 13px;background:#fff;border-bottom:1px solid #ddd6ca;flex-wrap:wrap;flex:0 0 auto}
+  header h1{font-size:14px;font-weight:600}
+  header .sub{font-size:11px;color:#8b8378}
+  .tools{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  button{font-family:inherit;font-size:11px;padding:4px 9px;border:1px solid #d5cdc0;background:#fbf9f6;color:#4a443c;border-radius:5px;cursor:pointer;white-space:nowrap}
+  button:hover{background:#f0eade;border-color:#c3b8a6}
+  button.on{background:#e8dcc0;border-color:#bfa877;color:#5c4a24;font-weight:600}
+  button.primary{background:#5c5145;color:#fff;border-color:#5c5145}
+  button.primary:hover{background:#463d33}
+  button.sm{font-size:10.5px;padding:3px 7px}
+
+  main{flex:1;display:flex;min-height:0}
+  #stage{flex:1;overflow:hidden;background:#e9e4db;display:flex;min-width:0}
+  svg{width:100%;height:100%;display:block}
+
+  aside{width:336px;flex-shrink:0;background:#fff;border-left:1px solid #ddd6ca;display:flex;flex-direction:column;min-height:0}
+  .ptitle{padding:8px 12px;font-size:11px;font-weight:600;letter-spacing:.4px;color:#8b8378;border-bottom:1px solid #eee8de;background:#fcfaf7;flex:0 0 auto;display:flex;align-items:center;gap:6px}
+  .ptitle .tab{margin-left:auto;display:flex;gap:3px}
+  #panelBody{flex:1;overflow-y:auto;padding:10px 12px;min-height:0}
+  #warn{padding:7px 12px;background:#eef5ec;border-top:1px solid #d9e7d6;font-size:11px;color:#3f6b3f;line-height:1.5;flex:0 0 auto;max-height:130px;overflow-y:auto}
+  #warn.bad{background:#fdecec;border-top-color:#f3d5d5;color:#96393c}
+  #warn .wt{font-weight:700;margin-bottom:2px}
+  #warn ul{list-style:none}
+  #warn li{margin:1px 0;padding-left:10px;position:relative}
+  #warn li:before{content:"·";position:absolute;left:1px}
+
+  .frow{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .frow label{width:62px;flex-shrink:0;font-size:11px;color:#7d7466}
+  .frow input{flex:1;min-width:0;font-family:inherit;font-size:11.5px;padding:3px 5px;border:1px solid #ddd5c7;border-radius:4px;background:#fdfdfb;color:#33302b;font-variant-numeric:tabular-nums}
+  .frow input:focus{outline:none;border-color:#bfa877;background:#fffdf7}
+  .frow .unit{font-size:9.5px;color:#a39a8d;flex-shrink:0;width:20px}
+  .frow.narrow label{width:26px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+
+  .badge{display:inline-block;font-size:9.5px;padding:1px 5px;border-radius:3px;font-weight:600;white-space:nowrap}
+  .b-cad{background:#dcecdc;color:#3a6b3a}
+  .b-std{background:#dde6f2;color:#39587f}
+  .b-guess{background:#faeccd;color:#866017}
+  .b-fix{background:#f5dcdc;color:#8a3636}
+  .b-buy{background:#e8e0f5;color:#5b3f8a}
+
+  .selname{font-size:13.5px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+  .selnote{font-size:10.5px;color:#8b8378;line-height:1.55;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f0ebe2}
+  .sec{font-size:10px;font-weight:600;color:#a39a8d;letter-spacing:.5px;margin:10px 0 5px;display:flex;align-items:center;gap:5px}
+  .hint{font-size:10.5px;color:#a39a8d;line-height:1.7}
+  .hint b{color:#6b6155}
+
+  .list{font-size:11px}
+  .li{display:flex;align-items:center;gap:5px;padding:3.5px 5px;border-radius:4px;cursor:pointer}
+  .li:hover{background:#f7f3ec}
+  .li.active{background:#ede5d4;font-weight:600}
+  .li .dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;border:1px solid rgba(0,0,0,.18)}
+  .li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .li .sz{font-size:9px;color:#a39a8d;font-variant-numeric:tabular-nums}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;font-size:9.5px;color:#8b8378;padding:5px 12px;background:#fcfaf7;border-top:1px solid #eee8de;flex:0 0 auto}
+  .legend span{display:flex;align-items:center;gap:3px}
+  .legend i{width:8px;height:8px;border-radius:2px;border:1px solid rgba(0,0,0,.12);display:inline-block}
+
+  table.sched{width:100%;border-collapse:collapse;font-size:10px;margin-top:4px}
+  table.sched th{text-align:left;font-weight:600;color:#8b8378;padding:2px 3px;border-bottom:1px solid #eee8de;font-size:9.5px}
+  table.sched td{padding:2px 3px;border-bottom:1px solid #f5f1ea;font-variant-numeric:tabular-nums}
+  .tot{font-size:10.5px;color:#5c5145;background:#fcfaf7;padding:5px 7px;border-radius:4px;margin-top:6px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Cherry Studio · 平面与灯位</h1>
+    <span class="sub" id="subHdr">4748×6836</span>
+    <div class="tools">
+      <button id="btnGrid" class="on">网格</button>
+      <button id="btnDim" class="on">尺寸</button>
+      <button id="btnAisle" class="on">动线</button>
+      <button id="btnLight" class="on">灯位</button>
+      <button id="btnSpacing">灯距</button>
+      <button id="btnBeam">光斑</button>
+      <button id="btnRef">草图区块</button>
+      <button id="btnReset">重置</button>
+      <button id="btnCsv" class="sm">导出清单</button>
+      <button id="btnJson" class="sm">存参数</button>
+      <button id="btnLoad" class="sm">读参数</button>
+      <button id="btnPng" class="primary">存图(高清)</button>
+    </div>
+  </header>
+  <main>
+    <div id="stage"><svg id="svg" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <aside>
+      <div class="ptitle">属性 / 元素<span class="tab"><button class="sm" id="tabElem">元素</button><button class="sm" id="tabLight">灯表</button></span></div>
+      <div id="panelBody"></div>
+      <div id="warn"></div>
+      <div class="legend">
+        <span><i style="background:#dcecdc"></i>图上标注</span>
+        <span><i style="background:#dde6f2"></i>行业标准</span>
+        <span><i style="background:#faeccd"></i>待确认</span>
+        <span><i style="background:#f5dcdc"></i>固定结构</span>
+        <span><i style="background:#e8e0f5"></i>已购实物</span>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ══════════════ 店铺参数（全部可调） ══════════════ */
+const SHOP0 = {
+  W: 4748,          // 开间（左墙→右墙）
+  D: 6836,          // 进深（后墙→临街门面）
+  H: 3000,          // 吊顶完成面高度（平顶）
+  ARC: 500,         // 左下弧形转角半径
+  /* 门面分格按实拍像素测量重算（照片 x171-830 为玻璃立面，拉手 x910 为门扇自由边）：
+     左固定玻璃 1500 ＋ 玻璃门 900 ＋ 右窄固定玻璃 150，右侧确有这条窄固定玻璃 */
+  GX1: 620,         // 玻璃幕墙起点 X（左砖柱内边）
+  GX2: 3170,        // 玻璃幕墙终点 X（右窄固定玻璃外边）
+  DX1: 2120,        // 玻璃门洞左
+  DX2: 3020,        // 玻璃门洞右
+  WY1: 3000,        // 左墙铁栅窗起点 Y
+  WY2: 4300,        // 左墙铁栅窗终点 Y
+  MY1: 5700,        // 右墙金属门起点 Y
+  MY2: 6600,        // 右墙金属门终点 Y
+  DOOR_ANG: 30      // 玻璃门外开角
+};
+
+/* ══════════════ 灯位设计参数 ══════════════ */
+const LIGHT0 = {
+  wallOff: 550,     // 灯心离墙距离（衣架列）
+  spacing: 700,     // 沿墙目标灯距
+  aimH: 1300,       // 打光目标高度（衣服中部）
+  tiltMax: 75,      // 象鼻灯最大俯仰（0–75° 可调）
+  beamRail: 24,     // 衣架连排光束角
+  beamSpot: 18,     // 重点照明（模特/首饰/镜前）
+  beamGen: 36,      // 基础照明
+  watt: 12,         // 单灯功率
+  hole: 75,         // 开孔直径
+  cct: 3500,        // 色温
+  cri: 90,          // 显色指数
+  show: true,
+  showBeam: true,
+  showSpacing: false
+};
+
+/* ══════════════ 元素 ══════════════
+   src: cad 图上标注 | std 行业标准 | guess 待确认 | fix 固定结构 | buy 已购实物
+   ═══════════════════════════════ */
+const ITEMS0 = [
+  { id:'wc', name:'卫生间', x:0, y:0, w:1800, d:1200, h:2600, src:'fix', color:'#dfeaea',
+    note:'左后角原砌体小间，墙体和门洞不能拆改，只做表面刷漆或贴面。宽 1800、深 1200。' },
+
+  { id:'fit', name:'试衣间', x:0, y:1200, w:1800, d:1200, h:2400, src:'guess', color:'#efe0b4',
+    note:'卫生间正下方，同样深 1200、宽 1800。正面挂布帘朝店内开，内装 4000K 灯。' },
+
+  { id:'cash', name:'收银台', x:3348, y:0, w:1400, d:600, h:1050, src:'buy', color:'#f7f2e8',
+    note:'已购 140×60×105cm。贴右上角：右靠右墙、后靠后墙。店员站位在台前（店内一侧）。' },
+
+  /* 全身镜：1m 宽，斜 45° 架在左下弧角，镜面朝店内（右上方向）。
+     人站在镜前约 800mm 的空地上，面朝角落，背后是临街玻璃——街光打在背上当轮廓，
+     镜前两只射灯补脸，这是能真正照出效果的位置。 */
+  { id:'mirror', name:'全身镜', x:180, y:6120, w:1000, d:80, h:1800, rot:38, src:'std', color:'#d6e8f2',
+    stand:{x:1150,y:5480},
+    note:'1m 宽落地镜，左下弧角斜 38° 摆放，镜面朝店内（面向店中央）。人站在镜前 x1150,y5480 的空地上照全身，背后是店内纵深、不背光；镜前两只射灯打在镜面反射补脸。这样既不占门口通道，也不用挤在弧墙边。' },
+
+  // ——— 左墙：两个衣架（1.5m + 1m）———
+  { id:'hL1', name:'衣架 150×150', x:0, y:2525, w:450, d:1800, h:1500, src:'buy', color:'#cda87a',
+    rail:1500, overhang:150,
+    note:'已购 150×150（矮架 1500 高）。放左墙上段，杆长 1500，两端挂衣各外扩 150，占墙 1800。' },
+
+  { id:'hL2', name:'衣架 100×170', x:0, y:4425, w:450, d:1300, h:1700, src:'buy', color:'#b9c9a0',
+    rail:1000, overhang:150,
+    note:'已购 100×170。放左墙下段靠窗处，杆长 1000，占墙 1300。窗户被挡一部分没关系。' },
+
+  // ——— 右墙：两个 2m 衣架 ———
+  { id:'hR1', name:'衣架 200×170 ①', x:4298, y:650, w:450, d:2300, h:1700, src:'buy', color:'#cda87a',
+    rail:2000, overhang:150,
+    note:'已购 200×170。靠后墙这一侧，杆长 2000，占墙 2300，垂直墙面占 450。' },
+
+  { id:'hR2', name:'衣架 200×170 ②', x:4298, y:3060, w:450, d:2300, h:1700, src:'buy', color:'#cda87a',
+    rail:2000, overhang:150,
+    note:'已购 200×170。与①留 100 缝。两架合计占右墙 4700。' },
+
+  // ——— 金属门后：常闭，做储物 ———
+  { id:'store', name:'门后储物架', x:4298, y:5500, w:450, d:1200, h:1800, src:'std', color:'#e0dbc8',
+    note:'金属门常闭不再通行，门后这段墙做储物：存货、备货、包装袋、蒸汽挂烫机。不用留通道。' },
+
+  // ——— 中央家具组 ———
+  { id:'sofa', name:'沙发', x:1800, y:3000, w:750, d:1600, h:780, src:'std', color:'#f2dc92', faceLeft:true,
+    note:'坐垫朝左（正对左墙铁栅窗），靠背在右。1600 双人位、深 750、坐高 420、总高 780。' },
+
+  { id:'jew', name:'首饰展示柜', x:2550, y:3300, w:450, d:1000, h:1200, src:'std', color:'#ffffff',
+    note:'紧贴沙发靠背右侧，与沙发合成一组。1000×450×1200，玻璃台面+下部两抽。需要窄光束高显色。' },
+
+  { id:'model', name:'橱窗模特', x:1000, y:6350, w:450, d:450, h:1750, src:'std', color:'#f6ece0',
+    note:'左侧固定玻璃内侧，背对店内、面向街道。门口通道(x2048–2998)必须完全清空。' },
+
+  { id:'refblock', name:'草图中央区块', x:2148, y:600, w:2000, d:4300, h:0, src:'cad', color:'rgba(255,206,88,.10)',
+    note:'你 CAD 图上的大矩形：2000×4300，后距 600、右距 600、下距 1936（600+4300+1936=6836 已核对）。',
+    isRef:true, noCollide:true }
+];
+
+/* ══════════════ 状态 ══════════════ */
+let SHOP = JSON.parse(JSON.stringify(SHOP0));
+let LG = JSON.parse(JSON.stringify(LIGHT0));
+let ITEMS = JSON.parse(JSON.stringify(ITEMS0));
+let selId = null;
+let dimSel = null;
+let showGrid=true, showDim=true, showAisle=true, showRef=false;
+let panelMode = 'elem';
+const SNAP = 25;
+const LS_KEY = 'cherry-studio-plan-v8';
+
+/* ══════════════ SVG ══════════════ */
+const svg = document.getElementById('svg');
+const NS='http://www.w3.org/2000/svg';
+let PADX=380, PADTOP=300, PADBOT=1000;
+
+function mk(tag,a,p){const n=document.createElementNS(NS,tag);for(const k in a)n.setAttribute(k,a[k]);if(p)p.appendChild(n);return n;}
+function tx(p,x,y,s,a){const t=mk('text',Object.assign({x,y,'font-family':'-apple-system,Segoe UI,Microsoft YaHei,sans-serif'},a||{}),p);t.textContent=s;return t;}
+
+const gGrid=mk('g',{},svg), gFloor=mk('g',{},svg), gRef=mk('g',{},svg),
+      gAisle=mk('g',{},svg), gItem=mk('g',{},svg), gBeam=mk('g',{},svg),
+      gLight=mk('g',{},svg), gSpacing=mk('g',{},svg), gDim=mk('g',{},svg), gAnno=mk('g',{},svg);
+
+/* 关键：装饰图层不接收鼠标，否则会挡住下面的家具，点不到元素。
+   顺序：网格/地面 → 动线 → 光斑 → 灯距 → 灯位 → 元素 → 尺寸 → 选中标注
+   除 元素(gItem/gRef)、动线、尺寸(gDim) 外，其余全部 pointer-events:none */
+[gGrid,gFloor,gBeam,gLight,gSpacing,gAnno].forEach(g=>g.setAttribute('pointer-events','none'));
+gAisle.setAttribute('pointer-events','none');
+
+/* 元素层必须在灯/光斑/标注之上，保证点击优先命中家具 */
+svg.appendChild(gRef); svg.appendChild(gAisle); svg.appendChild(gBeam);
+svg.appendChild(gItem); svg.appendChild(gDim); svg.appendChild(gAnno);
+svg.appendChild(gSpacing);
+svg.appendChild(gLight);   /* 灯位永远在最上层：一眼看得见哪里装了灯 */
+
+function setViewBox(){
+  const w = SHOP.W + PADX*2, h = SHOP.D + PADTOP + PADBOT;
+  svg.setAttribute('viewBox', `${-PADX} ${-PADTOP} ${w} ${h}`);
+}
+
+/* ══════════════ 底图 ══════════════ */
+function drawBase(){
+  gFloor.innerHTML=''; gGrid.innerHTML='';
+  const {W,D,ARC}=SHOP;
+  const cx=ARC, cy=D-ARC;
+  const path=`M 0 ${cy} A ${ARC} ${ARC} 0 0 0 ${cx} ${D} L ${W} ${D} L ${W} 0 L 0 0 Z`;
+
+  mk('path',{d:path,fill:'#fefcf8'},gFloor);
+
+  if(showGrid){
+    for(let x=0;x<=W;x+=500) mk('line',{x1:x,y1:0,x2:x,y2:D,stroke:x%1000===0?'#e6e0d2':'#f1ede4','stroke-width':x%1000===0?7:3.5},gGrid);
+    for(let y=0;y<=D;y+=500) mk('line',{x1:0,y1:y,x2:W,y2:y,stroke:y%1000===0?'#e6e0d2':'#f1ede4','stroke-width':y%1000===0?7:3.5},gGrid);
+  }
+
+  // 玻璃幕墙
+  mk('path',{d:`M 0 ${cy} A ${ARC} ${ARC} 0 0 0 ${cx} ${D}`,fill:'none',stroke:'#6f9cb5','stroke-width':44},gFloor);
+  if(SHOP.GX2>SHOP.GX1) mk('line',{x1:SHOP.GX1,y1:D,x2:SHOP.GX2,y2:D,stroke:'#6f9cb5','stroke-width':44},gFloor);
+  /* 三块玻璃的分格竖线：左固玻 | 门 | 右窄固玻 */
+  [SHOP.GX1,SHOP.DX1,SHOP.DX2,SHOP.GX2].forEach(x=>{
+    const major=(x===SHOP.GX1||x===SHOP.GX2);
+    mk('line',{x1:x,y1:D-110,x2:x,y2:D+110,stroke:major?'#4a443c':'#5b7c8c','stroke-width':major?20:14},gFloor);
+  });
+
+  // 门扇
+  const hx=SHOP.DX1, dw=SHOP.DX2-SHOP.DX1, rad=SHOP.DOOR_ANG*Math.PI/180;
+  const ex=hx+Math.cos(rad)*dw, ey=D-Math.sin(rad)*dw;
+  mk('line',{x1:hx,y1:D,x2:ex,y2:ey,stroke:'#6f9cb5','stroke-width':26},gFloor);
+  mk('path',{d:`M ${hx+dw} ${D} A ${dw} ${dw} 0 0 0 ${ex} ${ey}`,fill:'none',stroke:'#bdd2dd','stroke-width':9,'stroke-dasharray':'30 24'},gFloor);
+
+  // 墙体
+  mk('path',{d:path,fill:'none',stroke:'#463f36','stroke-width':30,'stroke-linejoin':'miter'},gFloor);
+
+  // 左墙铁栅窗
+  if(SHOP.WY2>SHOP.WY1){
+    mk('rect',{x:-16,y:SHOP.WY1,width:32,height:SHOP.WY2-SHOP.WY1,fill:'#cfe4f0',stroke:'#463f36','stroke-width':11},gFloor);
+    tx(gFloor,112,(SHOP.WY1+SHOP.WY2)/2,'铁栅窗 空调',{fill:'#4d7f9c','font-size':58,'writing-mode':'tb','letter-spacing':5});
+  }
+  // 右墙金属门（常闭）
+  if(SHOP.MY2>SHOP.MY1){
+    mk('rect',{x:SHOP.W-16,y:SHOP.MY1,width:32,height:SHOP.MY2-SHOP.MY1,fill:'#d9d3c7',stroke:'#463f36','stroke-width':11},gFloor);
+    tx(gFloor,SHOP.W-104,(SHOP.MY1+SHOP.MY2)/2,'金属门·常闭',{fill:'#8b8378','font-size':52,'writing-mode':'tb','letter-spacing':4});
+  }
+
+  // 门面文字
+  const g1w=SHOP.DX1-SHOP.GX1, g2w=SHOP.GX2-SHOP.DX2;
+  tx(gFloor,(SHOP.GX1+SHOP.DX1)/2,D+180,`固玻 ${g1w}`,{fill:'#4d7f9c','font-size':62,'text-anchor':'middle','font-weight':600});
+  tx(gFloor,(SHOP.DX1+SHOP.DX2)/2,D+180,`门 ${SHOP.DX2-SHOP.DX1}`,{fill:'#3f7391','font-size':62,'text-anchor':'middle','font-weight':700});
+  if(g2w>60) tx(gFloor,(SHOP.DX2+(SHOP.DX2+SHOP.GX2))/2,D+180,`窄${g2w}`,{fill:'#4d7f9c','font-size':52,'text-anchor':'middle','font-weight':600});
+  if(SHOP.W>SHOP.GX2) tx(gFloor,(SHOP.GX2+SHOP.W)/2,D+330,'瓷砖墙·招牌',{fill:'#8b8378','font-size':58,'text-anchor':'middle'});
+
+  tx(gFloor,W/2,-170,'▲ 后墙（店内最里侧）',{fill:'#a39a8d','font-size':84,'text-anchor':'middle','font-weight':700});
+  tx(gFloor,W/2,D+470,'▼ 临街玻璃门面',{fill:'#a39a8d','font-size':84,'text-anchor':'middle','font-weight':700});
+
+}
+
+/* ══════════════ 动线 ══════════════ */
+function drawAisle(){
+  gAisle.innerHTML='';
+  gAisle.style.display = showAisle?'':'none';
+  if(!showAisle) return;
+
+  const doorW = SHOP.DX2-SHOP.DX1;
+  mk('rect',{x:SHOP.DX1,y:SHOP.D-1500,width:doorW,height:1500,fill:'rgba(122,178,122,.14)',stroke:'#7ab27a','stroke-width':9,'stroke-dasharray':'40 26'},gAisle);
+  tx(gAisle,(SHOP.DX1+SHOP.DX2)/2,SHOP.D-1560,'进门通道 必须清空',{fill:'#4a7a4a','font-size':60,'text-anchor':'middle','font-weight':700});
+
+  const sofa=ITEMS.find(i=>i.id==='sofa'), jew=ITEMS.find(i=>i.id==='jew');
+  const hL=ITEMS.find(i=>i.id==='hL1'), hR=ITEMS.find(i=>i.id==='hR1');
+  if(sofa&&jew&&hL&&hR){
+    const y0=Math.max(sofa.y,hL.y), y1=Math.min(sofa.y+sofa.d,hL.y+hL.d);
+    if(y1>y0){
+      const yy=(y0+y1)/2;
+      const gL=sofa.x-(hL.x+hL.w), gR=hR.x-(jew.x+jew.w);
+      mk('line',{x1:hL.x+hL.w,y1:yy,x2:sofa.x,y2:yy,stroke:'#7ab27a','stroke-width':11,'stroke-dasharray':'34 20'},gAisle);
+      tx(gAisle,(hL.x+hL.w+sofa.x)/2,yy-38,gL,{fill:'#3f6b3f','font-size':68,'text-anchor':'middle','font-weight':700});
+      mk('line',{x1:jew.x+jew.w,y1:yy,x2:hR.x,y2:yy,stroke:'#7ab27a','stroke-width':11,'stroke-dasharray':'34 20'},gAisle);
+      tx(gAisle,(jew.x+jew.w+hR.x)/2,yy-38,gR,{fill:'#3f6b3f','font-size':68,'text-anchor':'middle','font-weight':700});
+    }
+  }
+}
+
+/* ══════════════ 灯位计算 ══════════════ */
+function drop(){ return (SHOP.H - LG.aimH); }
+function beamRadius(beam){
+  return drop()/1000 * Math.tan(beam/2*Math.PI/180) * 1000;
+}
+/* 象鼻灯俯仰角：灯心离墙 wallOff，落到目标高 aimH 时打到墙面所需角度 */
+function tiltFor(off){ return Math.atan(off/drop())*180/Math.PI; }
+
+function computeLights(){
+  const L=[];
+  const rRail=beamRadius(LG.beamRail), rSpot=beamRadius(LG.beamSpot), rGen=beamRadius(LG.beamGen);
+  const tilt = tiltFor(LG.wallOff);
+
+  const add=(x,y,beam,zone,extra)=>{
+    const r = beam===LG.beamRail?rRail : beam===LG.beamSpot?rSpot : rGen;
+    L.push(Object.assign({x,y,beam,r,zone},extra||{}));
+  };
+
+  /* 沿一段区间居中等距布灯；aimX/aimY 为打光目标点 */
+  function span(x,y0,y1,beam,zone,aimX){
+    const len=y1-y0;
+    if(len<=0) return;
+    const n=Math.max(1,Math.round(len/LG.spacing));
+    const step=n>1?len/n:0;
+    for(let i=0;i<n;i++) add(x, y0+step*(i+0.5), beam, zone, aimX!==undefined?{aimX,tilt}:{});
+  }
+
+  /* 右墙两架衣架合并成一整段 */
+  const rs=ITEMS.filter(i=>i.id==='hR1'||i.id==='hR2');
+  if(rs.length){
+    const y0=Math.min(...rs.map(r=>r.y))+120;
+    const y1=Math.max(...rs.map(r=>r.y+r.d))-120;
+    span(SHOP.W-LG.wallOff, y0, y1, LG.beamRail, '右墙衣架', SHOP.W);
+  }
+
+  /* 左墙两架衣架合并成一整段 */
+  const lsx=ITEMS.filter(i=>i.id==='hL1'||i.id==='hL2');
+  if(lsx.length){
+    const y0=Math.min(...lsx.map(r=>r.y))+120;
+    const y1=Math.max(...lsx.map(r=>r.y+r.d))-120;
+    span(LG.wallOff, y0, y1, LG.beamRail, '左墙衣架', 0);
+  }
+
+  /* 橱窗模特：正上方，略微偏前，避免眼窝阴影 */
+  const mo=ITEMS.find(i=>i.id==='model');
+  if(mo) add(mo.x+mo.w/2, mo.y+mo.d/2, LG.beamSpot, '橱窗模特');
+
+  /* 首饰柜：25% / 75% */
+  const jw=ITEMS.find(i=>i.id==='jew');
+  if(jw){
+    add(jw.x+jw.w/2, jw.y+jw.d*0.25, LG.beamSpot, '首饰柜');
+    add(jw.x+jw.w/2, jw.y+jw.d*0.75, LG.beamSpot, '首饰柜');
+  }
+
+  /* 沙发：只留一只宽光束，且前移到沙发前沿外——正上方直射会晃坐着的眼睛，
+     光从前方斜下来照坐垫和人身前，人脸上是柔光不刺眼。 */
+  const sf=ITEMS.find(i=>i.id==='sofa');
+  if(sf){
+    add(sf.x+sf.w/2, sf.y+sf.d+260, LG.beamGen, '沙发区');
+  }
+
+  /* 全身镜：镜前两只窄光束，打在镜面上再反射到人脸。
+     灯位取"站位点正上方偏两侧"，不落在左墙衣架上，避免照到衣架侧板。 */
+  const mi=ITEMS.find(i=>i.id==='mirror');
+  if(mi && mi.stand){
+    const sx=mi.stand.x, sy=mi.stand.y;
+    /* 底线：镜前灯不能落进左墙衣架灯列（x≈550）的 420mm 内，否则两只灯叠一起过曝。
+       改为沿镜面前方横向排开、并往店内退一步，既避让衣架灯又照得到镜面。 */
+    const lx = Math.max(sx-360, 1050);
+    add(lx,      sy-120, LG.beamSpot, '镜前补光');
+    add(lx+680,  sy-120, LG.beamSpot, '镜前补光');
+  }
+
+  /* 收银台：1 只，靠左半段，避开右墙衣架灯列 */
+  const ca=ITEMS.find(i=>i.id==='cash');
+  if(ca) add(ca.x+ca.w*0.28, ca.y+ca.d+520, LG.beamGen, '收银台');
+
+  /* 试衣间 / 卫生间 */
+  const ft=ITEMS.find(i=>i.id==='fit');
+  if(ft) add(ft.x+ft.w/2, ft.y+ft.d/2, LG.beamGen, '试衣间');
+  const wc=ITEMS.find(i=>i.id==='wc');
+  if(wc) add(wc.x+wc.w/2, wc.y+wc.d/2, LG.beamGen, '卫生间');
+
+  /* 门后储物 */
+  const st=ITEMS.find(i=>i.id==='store');
+  if(st) add(st.x+st.w/2, st.y+st.d/2, LG.beamGen, '门后储物');
+
+  /* 入口 + 中央通道 */
+  add((SHOP.DX1+SHOP.DX2)/2, SHOP.D-900, LG.beamGen, '入口');
+  add(SHOP.W*0.5, 2300, LG.beamGen, '中央通道');
+
+  return L;
+}
+
+function drawBeams(){
+  gBeam.innerHTML='';
+  gBeam.style.display = (LG.show&&LG.showBeam)?'':'none';
+  if(!LG.show||!LG.showBeam) return;
+  computeLights().forEach(l=>{
+    mk('circle',{cx:l.x,cy:l.y,r:l.r,
+      fill:l.beam===LG.beamSpot?'rgba(255,196,70,.20)':(l.beam===LG.beamRail?'rgba(255,214,120,.15)':'rgba(255,232,170,.11)'),
+      stroke:l.beam===LG.beamSpot?'#e8a72c':(l.beam===LG.beamRail?'#dfb85a':'#e2c98a'),
+      'stroke-width':4,'stroke-opacity':.55,'stroke-dasharray':'16 14'},gBeam);
+  });
+}
+
+function drawLights(){
+  gLight.innerHTML='';
+  gLight.style.display = LG.show?'':'none';
+  if(!LG.show) return;
+
+  const ls=computeLights();
+  ls.forEach((l,i)=>{
+    const g=mk('g',{},gLight);
+    // 打光方向：指向墙面目标（体现象鼻灯可调角）
+    if(l.aimX!==undefined){
+      mk('line',{x1:l.x,y1:l.y,x2:l.aimX,y2:l.y,stroke:'#c9922b','stroke-width':9,'stroke-dasharray':'20 14','stroke-opacity':.75},g);
+      mk('circle',{cx:l.aimX,cy:l.y,r:12,fill:'#c9922b'},g);
+    }
+    if(l.aimY!==undefined){
+      mk('line',{x1:l.x,y1:l.y,x2:l.x,y2:l.aimY,stroke:'#c9922b','stroke-width':9,'stroke-dasharray':'20 14','stroke-opacity':.75},g);
+      mk('circle',{cx:l.x,cy:l.aimY,r:12,fill:'#c9922b'},g);
+    }
+    mk('circle',{cx:l.x,cy:l.y,r:62,fill:l.beam===LG.beamSpot?'#f0b83a':(l.beam===LG.beamRail?'#f3cd6e':'#f0d79a'),stroke:'#8a6a22','stroke-width':8},g);
+    mk('circle',{cx:l.x,cy:l.y,r:24,fill:'#fff8e0'},g);
+    tx(g,l.x,l.y+126,String(i+1),{fill:'#8a6a22','font-size':50,'text-anchor':'middle','font-weight':700});
+  });
+
+  tx(gLight,SHOP.W/2,SHOP.D+PADBOT-250,
+    `象鼻灯 ${ls.length} 只 · 开孔${LG.hole} · ${LG.watt}W · ${LG.cct}K · Ra≥${LG.cri} · 俯仰 ${tiltFor(LG.wallOff).toFixed(0)}°（可调0–${LG.tiltMax}°）`,
+    {fill:'#8a6a22','font-size':66,'text-anchor':'middle','font-weight':600});
+  tx(gLight,SHOP.W/2,SHOP.D+PADBOT-140,
+    `衣架连排 ${LG.beamRail}° · 重点 ${LG.beamSpot}° · 基础 ${LG.beamGen}° · 灯心离墙 ${LG.wallOff}`,
+    {fill:'#a89a68','font-size':58,'text-anchor':'middle'});
+}
+
+/* ══════════════ 灯距 / 离墙距离 标注 ══════════════ */
+function drawSpacing(){
+  gSpacing.innerHTML='';
+  gSpacing.style.display = (LG.show&&LG.showSpacing)?'':'none';
+  if(!LG.show||!LG.showSpacing) return;
+
+  const ls=computeLights();
+  const byZone={};
+  ls.forEach(l=>{ (byZone[l.zone]=byZone[l.zone]||[]).push(l); });
+
+  /* 尺寸线：两点之间画线 + 端点短撇 + 数字 */
+  const dimLine=(x1,y1,x2,y2,label,off)=>{
+    if(Math.abs(x1-x2)<2&&Math.abs(y1-y2)<2) return;
+    mk('line',{x1,y1,x2,y2,stroke:'#c9922b','stroke-width':6,'stroke-opacity':.85},gSpacing);
+    const vert=Math.abs(x1-x2)<Math.abs(y1-y2);
+    [[x1,y1],[x2,y2]].forEach(([x,y])=>{
+      if(vert) mk('line',{x1:x-26,y1:y,x2:x+26,y2:y,stroke:'#c9922b','stroke-width':6,'stroke-opacity':.85},gSpacing);
+      else mk('line',{x1:x,y1:y-26,x2:x,y2:y+26,stroke:'#c9922b','stroke-width':6,'stroke-opacity':.85},gSpacing);
+    });
+    const mx=(x1+x2)/2, my=(y1+y2)/2;
+    const t=tx(gSpacing,mx,my,label,{fill:'#a8741c','font-size':52,'text-anchor':'middle','font-weight':700,
+      'paint-order':'stroke',stroke:'#fff','stroke-width':11,'stroke-opacity':.95});
+    if(vert) t.setAttribute('transform',`rotate(-90 ${mx} ${my})`);
+  };
+
+  /* 每列灯：相邻间距 + 到墙距离 */
+  Object.keys(byZone).forEach(z=>{
+    const g=byZone[z];
+    if(g.length<1) return;
+    const xs=g.map(l=>l.x), ys=g.map(l=>l.y);
+    const spanX=Math.max(...xs)-Math.min(...xs);
+    const spanY=Math.max(...ys)-Math.min(...ys);
+    const alongY = spanY>=spanX;
+
+    // 是否贴墙列（由灯自身的方向线判断）
+    const toWall = g[0].aimX!==undefined ? g[0].aimX : null;
+
+    if(alongY){
+      const sx=g[0].x;
+      const sorted=[...g].sort((a,b)=>a.y-b.y);
+      // 到墙距离（只在第一只灯处标一次）
+      if(toWall!==null){
+        dimLine(sx, sorted[0].y, toWall, sorted[0].y, String(LG.wallOff), 0);
+      }
+      // 相邻间距
+      const nodeOff = toWall===0 ? 165 : -165;
+      for(let i=1;i<sorted.length;i++){
+        dimLine(sx+nodeOff, sorted[i-1].y, sx+nodeOff, sorted[i].y, String(Math.round(sorted[i].y-sorted[i-1].y)), 0);
+      }
+    }else{
+      const sy=g[0].y;
+      const sorted=[...g].sort((a,b)=>a.x-b.x);
+      if(toWall!==null){
+        dimLine(sorted[0].x, sy, sorted[0].x, toWall, String(LG.wallOff), 0);
+      }
+      for(let i=1;i<sorted.length;i++){
+        dimLine(sorted[i-1].x, sy+165, sorted[i].x, sy+165, String(Math.round(sorted[i].x-sorted[i-1].x)), 0);
+      }
+    }
+  });
+
+  // 俯仰角说明
+  tx(gSpacing,-PADX+40,-PADTOP+90,
+    `象鼻灯可调：俯仰 0–${LG.tiltMax}°、水平 360°。当前灯心离墙 ${LG.wallOff}，需俯仰 ${tiltFor(LG.wallOff).toFixed(0)}°`,
+    {fill:'#a8741c','font-size':54,'font-weight':600});
+}
+
+/* ══════════════ 元素 ══════════════ */
+function drawItems(){
+  gItem.innerHTML=''; gRef.innerHTML='';
+
+  ITEMS.forEach(it=>{
+    const isSel = it.id===selId;
+    const target = it.isRef ? gRef : gItem;
+    const g=mk('g',{},target);
+    g.style.cursor='move';
+
+    /* 斜放元素（如全身镜 rot）：整体绕自身中心旋转，几何和点击区域一起转 */
+    if(it.rot){
+      const rcx=it.x+it.w/2, rcy=it.y+it.d/2;
+      g.setAttribute('transform',`rotate(${it.rot} ${rcx} ${rcy})`);
+    }
+
+    const r=mk('rect',{x:it.x,y:it.y,width:it.w,height:it.d,fill:it.color,
+      stroke:isSel?'#c8892b':(it.src==='fix'?'#a85a5a':(it.isRef?'#c9a227':'#8a8172')),
+      'stroke-width':isSel?20:(it.isRef?9:10),rx:it.isRef?26:12},g);
+    if(it.src==='fix') r.setAttribute('stroke-dasharray','42 26');
+    if(it.isRef) r.setAttribute('stroke-dasharray','50 34');
+
+    // 衣架：画出横杆实际长度
+    if(it.rail){
+      const horiz = it.d>it.w;
+      if(horiz){
+        const oy = it.y + it.overhang;
+        mk('line',{x1:it.x+it.w*0.2,y1:oy,x2:it.x+it.w*0.2,y2:oy+it.rail,stroke:'#8a6a3a','stroke-width':13},g);
+        mk('line',{x1:it.x+it.w*0.8,y1:oy,x2:it.x+it.w*0.8,y2:oy+it.rail,stroke:'#8a6a3a','stroke-width':13},g);
+      }else{
+        const ox = it.x + it.overhang;
+        mk('line',{x1:ox,y1:it.y+it.d*0.2,x2:ox+it.rail,y2:it.y+it.d*0.2,stroke:'#8a6a3a','stroke-width':13},g);
+      }
+    }
+
+    const cx=it.x+it.w/2, cy=it.y+it.d/2;
+    const vertical = it.d > it.w*1.4;
+    const fs=Math.min(76,Math.max(44,Math.min(it.w,it.d)*0.125));
+    const t=tx(g,cx,cy,it.name,{fill:it.isRef?'#9a7d20':(isSel?'#7a4f10':'#4a443c'),
+      'font-size':isSel?fs:fs*0.88,'text-anchor':'middle','font-weight':isSel?700:500,
+      'paint-order':'stroke',stroke:'#fff','stroke-width':11,'stroke-opacity':.9});
+    if(vertical) t.setAttribute('transform',`rotate(-90 ${cx} ${cy})`);
+
+    /* 全身镜：镜面朝店内，标出站位 */
+    if(it.id==='mirror'){
+      const mx=it.x+it.w/2, my=it.y+it.d/2;
+      // 镜面（朝店内一侧）用亮蓝描一条
+      mk('line',{x1:it.x+40,y1:it.y+it.d,x2:it.x+it.w-40,y2:it.y+it.d,
+        stroke:'#6fa8c8','stroke-width':16},g);
+      if(it.stand){
+        mk('circle',{cx:it.stand.x,cy:it.stand.y,r:96,fill:'rgba(111,168,200,.16)',
+          stroke:'#5b93b3','stroke-width':7,'stroke-dasharray':'24 16'},g);
+        tx(g,it.stand.x,it.stand.y+22,'站位',{fill:'#3f7391','font-size':52,'text-anchor':'middle','font-weight':700});
+        mk('line',{x1:it.stand.x,y1:it.stand.y,x2:mx,y2:my,stroke:'#5b93b3','stroke-width':6,
+          'stroke-dasharray':'18 14','stroke-opacity':.7},g);
+      }
+    }
+
+    if(it.faceLeft){
+      const ay=it.y+it.d/2;
+      mk('line',{x1:it.x+it.w*0.35,y1:ay,x2:it.x-150,y2:ay,stroke:'#9a7a20','stroke-width':15},g);
+      mk('path',{d:`M ${it.x-150} ${ay} l 92 -34 l 0 68 z`,fill:'#9a7a20'},g);
+      tx(g,it.x-180,ay-44,'朝左窗',{fill:'#9a7a20','font-size':56,'text-anchor':'end','font-weight':700});
+    }
+
+    if(isSel&&!it.isRef){
+      mk('rect',{x:it.x+it.w-46,y:it.y+it.d-46,width:92,height:92,fill:'#c8892b',stroke:'#fff','stroke-width':12,rx:12,class:'handle'},g);
+      mk('rect',{x:it.x-8,y:it.y-8,width:it.w+16,height:it.d+16,fill:'none',stroke:'#c8892b','stroke-width':7,'stroke-dasharray':'26 18','stroke-opacity':.8},g);
+    }
+
+    g.addEventListener('pointerdown',ev=>{
+      select(it.id);
+      if(it.isRef) return;
+      ev.preventDefault();
+      const p0=toSvg(ev), ox=it.x, oy=it.y, ow=it.w, od=it.d;
+      const onHandle = ev.target.classList && ev.target.classList.contains('handle');
+      g.setPointerCapture(ev.pointerId);
+      const move=e2=>{
+        const p=toSvg(e2), dx=p.x-p0.x, dy=p.y-p0.y;
+        if(onHandle){ it.w=Math.max(80,snap(ow+dx)); it.d=Math.max(60,snap(od+dy)); }
+        else { it.x=snap(ox+dx); it.y=snap(oy+dy); }
+        redraw(); syncForm();
+      };
+      const up=()=>{ g.removeEventListener('pointermove',move); g.removeEventListener('pointerup',up); validate(); save(); };
+      g.addEventListener('pointermove',move); g.addEventListener('pointerup',up);
+    });
+  });
+
+  gRef.style.display = showRef?'':'none';
+}
+
+/* ══════════════ 选中态：虚线定位 + 长宽标注 ══════════════ */
+function drawAnno(){
+  gAnno.innerHTML='';
+  const it = ITEMS.find(i=>i.id===selId);
+  if(!it || it.isRef) return;
+
+  const DASH='34 22';
+  const dimTxt=(x,y,s,anchor,rot)=>{
+    const t=tx(gAnno,x,y,s,{fill:'#b8761a','font-size':62,'text-anchor':anchor||'middle','font-weight':700,
+      'paint-order':'stroke',stroke:'#fff','stroke-width':13,'stroke-opacity':.95});
+    if(rot) t.setAttribute('transform',`rotate(${rot} ${x} ${y})`);
+    return t;
+  };
+  const tick=(x,y,v)=>{
+    if(v) mk('line',{x1:x-30,y1:y,x2:x+30,y2:y,stroke:'#b8761a','stroke-width':7},gAnno);
+    else mk('line',{x1:x,y1:y-30,x2:x,y2:y+30,stroke:'#b8761a','stroke-width':7},gAnno);
+  };
+
+  const cy = it.y+it.d/2, cx = it.x+it.w/2;
+
+  // 距左墙 X
+  mk('line',{x1:0,y1:cy,x2:it.x,y2:cy,stroke:'#b8761a','stroke-width':7,'stroke-dasharray':DASH},gAnno);
+  if(it.x>60){ tick(it.x,cy,1); dimTxt(it.x/2,cy-26,String(it.x)); }
+
+  // 距后墙 Y
+  mk('line',{x1:cx,y1:0,x2:cx,y2:it.y,stroke:'#b8761a','stroke-width':7,'stroke-dasharray':DASH},gAnno);
+  if(it.y>60){ tick(cx,it.y,0); dimTxt(cx-30,it.y/2,String(it.y),'middle',-90); }
+
+  // 宽（矩形下方）
+  const by=it.y+it.d+120;
+  mk('line',{x1:it.x,y1:it.y+it.d+40,x2:it.x,y2:by+30,stroke:'#b8761a','stroke-width':5,'stroke-dasharray':'18 16','stroke-opacity':.7},gAnno);
+  mk('line',{x1:it.x+it.w,y1:it.y+it.d+40,x2:it.x+it.w,y2:by+30,stroke:'#b8761a','stroke-width':5,'stroke-dasharray':'18 16','stroke-opacity':.7},gAnno);
+  mk('line',{x1:it.x,y1:by,x2:it.x+it.w,y2:by,stroke:'#b8761a','stroke-width':7},gAnno);
+  tick(it.x,by,0); tick(it.x+it.w,by,0);
+  dimTxt(cx,by+72,`宽 ${it.w}`);
+
+  // 深（矩形右侧）
+  const rx=it.x+it.w+120;
+  mk('line',{x1:it.x+it.w+40,y1:it.y,x2:rx+30,y2:it.y,stroke:'#b8761a','stroke-width':5,'stroke-dasharray':'18 16','stroke-opacity':.7},gAnno);
+  mk('line',{x1:it.x+it.w+40,y1:it.y+it.d,x2:rx+30,y2:it.y+it.d,stroke:'#b8761a','stroke-width':5,'stroke-dasharray':'18 16','stroke-opacity':.7},gAnno);
+  mk('line',{x1:rx,y1:it.y,x2:rx,y2:it.y+it.d,stroke:'#b8761a','stroke-width':7},gAnno);
+  tick(rx,it.y,1); tick(rx,it.y+it.d,1);
+  dimTxt(rx+70,cy,`深 ${it.d}`,'middle',90);
+
+  // 平面图不标高度：高度数据只在右侧面板里编辑，避免与平面尺寸混淆
+}
+
+/* ══════════════ 店铺尺寸（可点击选中） ══════════════ */
+function drawDims(){
+  gDim.innerHTML='';
+  gDim.style.display = showDim?'':'none';
+  if(!showDim) return;
+
+  const chain=(key,x1,y1,x2,y2,label)=>{
+    if(Math.abs(x1-x2)<2&&Math.abs(y1-y2)<2) return;
+    const on = dimSel===key;
+    const g=mk('g',{},gDim);
+    g.style.cursor='pointer';
+    const col = on?'#b8761a':'#b3a894';
+    const wdt = on?11:7;
+    mk('line',{x1,y1,x2,y2,stroke:col,'stroke-width':wdt},g);
+    [[x1,y1],[x2,y2]].forEach(([x,y])=>mk('line',{x1:x-28,y1:y-28,x2:x+28,y2:y+28,stroke:col,'stroke-width':wdt},g));
+    const mx=(x1+x2)/2,my=(y1+y2)/2;
+    const t=tx(g,mx,my,label,{fill:on?'#b8761a':'#7d7466','font-size':on?84:78,'text-anchor':'middle','font-weight':600,
+      'paint-order':'stroke',stroke:'#fff','stroke-width':12,'stroke-opacity':.9});
+    if(Math.abs(x1-x2)<Math.abs(y1-y2)) t.setAttribute('transform',`rotate(-90 ${mx} ${my})`);
+    g.addEventListener('pointerdown',ev=>{ ev.stopPropagation(); dimSel=key; selId=null; drawDims(); drawAnno(); renderPanel(); });
+  };
+
+  chain('W',0,-90,SHOP.W,-90,String(SHOP.W));
+  chain('D',SHOP.W+90,0,SHOP.W+90,SHOP.D,String(SHOP.D));
+  chain('ARC',0,SHOP.D+90,SHOP.ARC,SHOP.D+90,'R'+SHOP.ARC);
+  /* 尺寸链：150 的窄固玻太窄，尺寸数字会与相邻 1578 叠在一起，
+     改为在窄玻璃下方单独用文字标（“窄150”），链上只标三段主尺寸 */
+  chain('G1',SHOP.GX1,SHOP.D+90,SHOP.DX1,SHOP.D+90,String(SHOP.DX1-SHOP.GX1));
+  chain('DOOR',SHOP.DX1,SHOP.D+90,SHOP.DX2,SHOP.D+90,String(SHOP.DX2-SHOP.DX1));
+  chain('G3',SHOP.GX2,SHOP.D+90,SHOP.W,SHOP.D+90,String(SHOP.W-SHOP.GX2));
+}
+
+function snap(v){return Math.round(v/SNAP)*SNAP;}
+function toSvg(ev){
+  const p=svg.createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+/* ══════════════ 校验 ══════════════ */
+function validate(){
+  const w=document.getElementById('warn');
+  const msgs=[], ok=[];
+  const real=ITEMS.filter(i=>!i.noCollide);
+
+  for(let a=0;a<real.length;a++)for(let b=a+1;b<real.length;b++){
+    const A=real[a],B=real[b];
+    if(A.x<B.x+B.w&&A.x+A.w>B.x&&A.y<B.y+B.d&&A.y+A.d>B.y) msgs.push(`${A.name} 与 ${B.name} 重叠`);
+  }
+  real.forEach(i=>{ if(i.x<-1||i.y<-1||i.x+i.w>SHOP.W+1||i.y+i.d>SHOP.D+1) msgs.push(`${i.name} 超出店铺范围`); });
+
+  const sofa=ITEMS.find(i=>i.id==='sofa'), jew=ITEMS.find(i=>i.id==='jew');
+  const hL=ITEMS.find(i=>i.id==='hL1'), hR=ITEMS.find(i=>i.id==='hR1');
+  if(sofa&&jew&&hL&&hR){
+    const gL=sofa.x-(hL.x+hL.w), gR=hR.x-(jew.x+jew.w);
+    if(gL<900) msgs.push(`沙发左侧通道 ${gL}mm，建议≥900`);
+    else ok.push(`左通道 ${gL}`);
+    if(gR<900) msgs.push(`首饰柜右侧通道 ${gR}mm，建议≥900`);
+    else ok.push(`右通道 ${gR}`);
+  }
+  const blockers=real.filter(i=>i.y+i.d>SHOP.D-1500 && i.x<SHOP.DX2 && i.x+i.w>SHOP.DX1);
+  if(blockers.length) msgs.push(`门口通道被占：${blockers.map(b=>b.name).join('、')}`);
+  else ok.push('门口通道畅通');
+
+  const ls=computeLights();
+  ok.push(`灯 ${ls.length} 只 / ${ls.length*LG.watt}W`);
+
+  // 灯距过近检查
+  let near=0;
+  for(let i=0;i<ls.length;i++)for(let j=i+1;j<ls.length;j++){
+    const d=Math.hypot(ls[i].x-ls[j].x, ls[i].y-ls[j].y);
+    if(d<420) near++;
+  }
+  if(near) msgs.push(`有 ${near} 处灯距＜420mm，会局部过曝`);
+  else ok.push('灯距均匀');
+
+  // 灯是否落在衣架占地内（会被吊架/衣服挡住，等于白装）
+  const racks=ITEMS.filter(i=>i.rail);
+  const wasted=[];
+  ls.forEach((l,i)=>{
+    racks.forEach(r=>{
+      if(l.x>=r.x&&l.x<=r.x+r.w&&l.y>=r.y&&l.y<=r.y+r.d) wasted.push(`#${i+1}(${l.zone})`);
+    });
+  });
+  if(wasted.length) msgs.push(`${wasted.join('、')} 落在衣架占地内，会被吊架挡住`);
+  else ok.push('灯位不压衣架');
+
+  // 俯仰角检查
+  const tilt=tiltFor(LG.wallOff);
+  if(tilt>LG.tiltMax) msgs.push(`俯仰角 ${tilt.toFixed(0)}° 超出灯具可调范围 ${LG.tiltMax}°`);
+  else ok.push(`俯仰 ${tilt.toFixed(0)}° / 可调0–${LG.tiltMax}°`);
+
+  if(msgs.length){ w.className='bad'; w.innerHTML='<div class="wt">⚠ 需要调整</div><ul>'+msgs.map(m=>`<li>${m}</li>`).join('')+'</ul>'; }
+  else { w.className=''; w.innerHTML='<div class="wt">✓ 布局通过</div><ul>'+ok.map(m=>`<li>${m}</li>`).join('')+'</ul>'; }
+}
+
+/* ══════════════ 面板 ══════════════ */
+const body=document.getElementById('panelBody');
+const BADGE={cad:['b-cad','图上标注'],std:['b-std','行业标准'],guess:['b-guess','待确认'],fix:['b-fix','固定结构'],buy:['b-buy','已购实物']};
+
+function renderPanel(){
+  if(panelMode==='light') return renderLightTable();
+
+  const it=ITEMS.find(i=>i.id===selId);
+  let h='';
+
+  if(it){
+    const [cls,lab]=BADGE[it.src]||BADGE.guess;
+    h+=`<div class="selname">${it.name}<span class="badge ${cls}">${lab}</span></div>`;
+    h+=`<div class="selnote">${it.note}</div>`;
+
+    if(!it.isRef&&!it.noDrag){
+      h+=`<div class="sec">位置　距左墙 X / 距后墙 Y</div>
+        <div class="g2">
+          <div class="frow narrow"><label>X</label><input type="number" id="f_x" value="${it.x}" step="25"><span class="unit">mm</span></div>
+          <div class="frow narrow"><label>Y</label><input type="number" id="f_y" value="${it.y}" step="25"><span class="unit">mm</span></div>
+        </div>
+        <div class="sec">占地　宽 × 深（含挂衣）</div>
+        <div class="g2">
+          <div class="frow narrow"><label>宽</label><input type="number" id="f_w" value="${it.w}" step="25"><span class="unit">mm</span></div>
+          <div class="frow narrow"><label>深</label><input type="number" id="f_d" value="${it.d}" step="25"><span class="unit">mm</span></div>
+        </div>
+        <div class="frow" style="margin-top:6px"><label>高</label><input type="number" id="f_h" value="${it.h}" step="25"><span class="unit">mm</span></div>`;
+      if(it.rail!==undefined){
+        h+=`<div class="sec">挂衣参数</div>
+          <div class="g2">
+            <div class="frow narrow"><label>杆长</label><input type="number" id="f_rail" value="${it.rail}" step="50"><span class="unit">mm</span></div>
+            <div class="frow narrow"><label>外扩</label><input type="number" id="f_oh" value="${it.overhang}" step="25"><span class="unit">mm</span></div>
+          </div>
+          <div class="hint">挂衣后占墙 = 杆长 + 2×外扩 = <b>${it.rail+it.overhang*2}</b>mm</div>`;
+      }
+    }else{
+      h+=`<div class="sec">区块尺寸</div>
+        <div class="g2">
+          <div class="frow narrow"><label>宽</label><input type="number" id="f_w" value="${it.w}" step="25"><span class="unit">mm</span></div>
+          <div class="frow narrow"><label>深</label><input type="number" id="f_d" value="${it.d}" step="25"><span class="unit">mm</span></div>
+        </div>`;
+    }
+  }else{
+    h+=`<div class="sec">店铺参数（全部可改）</div>
+      <div class="g2">
+        <div class="frow narrow"><label>开间</label><input type="number" id="s_W" value="${SHOP.W}" step="10"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>进深</label><input type="number" id="s_D" value="${SHOP.D}" step="10"><span class="unit">mm</span></div>
+      </div>
+      <div class="g3">
+        <div class="frow narrow"><label>吊顶</label><input type="number" id="s_H" value="${SHOP.H}" step="50"><span class="unit"></span></div>
+        <div class="frow narrow"><label>弧R</label><input type="number" id="s_ARC" value="${SHOP.ARC}" step="50"><span class="unit"></span></div>
+        <div class="frow narrow"><label>门角</label><input type="number" id="s_DA" value="${SHOP.DOOR_ANG}" step="5"><span class="unit">°</span></div>
+      </div>
+      <div class="sec">玻璃幕墙 / 门洞</div>
+      <div class="g2">
+        <div class="frow narrow"><label>玻璃起</label><input type="number" id="s_GX1" value="${SHOP.GX1}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>玻璃止</label><input type="number" id="s_GX2" value="${SHOP.GX2}" step="25"><span class="unit">mm</span></div>
+      </div>
+      <div class="g2">
+        <div class="frow narrow"><label>门左</label><input type="number" id="s_DX1" value="${SHOP.DX1}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>门右</label><input type="number" id="s_DX2" value="${SHOP.DX2}" step="25"><span class="unit">mm</span></div>
+      </div>
+      <div class="sec">左墙窗 / 右墙金属门</div>
+      <div class="g2">
+        <div class="frow narrow"><label>窗起</label><input type="number" id="s_WY1" value="${SHOP.WY1}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>窗止</label><input type="number" id="s_WY2" value="${SHOP.WY2}" step="25"><span class="unit">mm</span></div>
+      </div>
+      <div class="g2">
+        <div class="frow narrow"><label>门起</label><input type="number" id="s_MY1" value="${SHOP.MY1}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>门止</label><input type="number" id="s_MY2" value="${SHOP.MY2}" step="25"><span class="unit">mm</span></div>
+      </div>
+
+      <div class="sec">灯位设计参数</div>
+      <div class="g2">
+        <div class="frow narrow"><label>灯离墙</label><input type="number" id="l_off" value="${LG.wallOff}" step="25"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>灯间距</label><input type="number" id="l_sp" value="${LG.spacing}" step="50"><span class="unit">mm</span></div>
+      </div>
+      <div class="g2">
+        <div class="frow narrow"><label>目标高</label><input type="number" id="l_ah" value="${LG.aimH}" step="50"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>功率</label><input type="number" id="l_w" value="${LG.watt}" step="1"><span class="unit">W</span></div>
+      </div>
+      <div class="g2">
+        <div class="frow narrow"><label>衣架束</label><input type="number" id="l_bra" value="${LG.beamRail}" step="3"><span class="unit">°</span></div>
+        <div class="frow narrow"><label>重点束</label><input type="number" id="l_bsp" value="${LG.beamSpot}" step="3"><span class="unit">°</span></div>
+      </div>
+      <div class="g2">
+        <div class="frow narrow"><label>开孔</label><input type="number" id="l_ho" value="${LG.hole}" step="5"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>色温</label><input type="number" id="l_cct" value="${LG.cct}" step="100"><span class="unit">K</span></div>
+      </div>
+      <div class="tot">当前俯仰角 <b>${tiltFor(LG.wallOff).toFixed(0)}°</b>（灯具可调 0–${LG.tiltMax}°）<br>灯到衣服垂直落差 <b>${drop()}mm</b></div>
+      <div class="hint" style="margin-top:6px">修改后自动保存到本机，下次打开自动恢复。</div>`;
+  }
+
+  h+=`<div class="sec">全部元素（${ITEMS.filter(i=>!i.isRef).length}）</div><div class="list">`;
+  ITEMS.forEach(i=>{
+    h+=`<div class="li ${i.id===selId?'active':''}" data-sel="${i.id}">
+      <span class="dot" style="background:${i.isRef?'#fff6d6':i.color}"></span>
+      <span class="nm">${i.name}</span>
+      <span class="sz">${i.w}×${i.d}</span></div>`;
+  });
+  h+='</div>';
+
+  body.innerHTML=h;
+  body.querySelectorAll('[data-sel]').forEach(n=>n.addEventListener('click',()=>select(n.getAttribute('data-sel'))));
+  bindInputs();
+}
+
+function bindInputs(){
+  const num=(id,fn)=>{const el=document.getElementById(id);if(!el)return;el.addEventListener('input',()=>{const v=parseFloat(el.value);if(isNaN(v))return;fn(v);redraw();validate();save();syncListSizes();});};
+
+  const t=ITEMS.find(i=>i.id===selId);
+  if(t){
+    num('f_x',v=>t.x=v); num('f_y',v=>t.y=v);
+    num('f_w',v=>t.w=Math.max(60,v)); num('f_d',v=>t.d=Math.max(50,v));
+    num('f_h',v=>t.h=Math.max(0,v));
+    num('f_rail',v=>{t.rail=Math.max(200,v); if(t.d>t.w) t.d=t.rail+t.overhang*2; else t.w=t.rail+t.overhang*2;});
+    num('f_oh',v=>{t.overhang=Math.max(0,v); if(t.d>t.w) t.d=t.rail+t.overhang*2; else t.w=t.rail+t.overhang*2;});
+  }
+
+  num('s_W',v=>SHOP.W=Math.max(1000,v)); num('s_D',v=>SHOP.D=Math.max(1000,v));
+  num('s_H',v=>SHOP.H=Math.max(1200,v)); num('s_ARC',v=>SHOP.ARC=Math.max(0,v));
+  num('s_DA',v=>SHOP.DOOR_ANG=Math.max(0,Math.min(90,v)));
+  num('s_GX1',v=>SHOP.GX1=v); num('s_GX2',v=>SHOP.GX2=v);
+  num('s_DX1',v=>SHOP.DX1=v); num('s_DX2',v=>SHOP.DX2=v);
+  num('s_WY1',v=>SHOP.WY1=v); num('s_WY2',v=>SHOP.WY2=v);
+  num('s_MY1',v=>SHOP.MY1=v); num('s_MY2',v=>SHOP.MY2=v);
+  num('l_off',v=>LG.wallOff=v); num('l_sp',v=>LG.spacing=Math.max(200,v));
+  num('l_ah',v=>LG.aimH=v); num('l_w',v=>LG.watt=v);
+  num('l_bra',v=>LG.beamRail=v); num('l_bsp',v=>LG.beamSpot=v);
+  num('l_ho',v=>LG.hole=v); num('l_cct',v=>LG.cct=v);
+
+  const sH=document.getElementById('s_H');
+  if(sH) sH.addEventListener('input',()=>{document.getElementById('subHdr').textContent=`${SHOP.W}×${SHOP.D}`;});
+}
+
+function renderLightTable(){
+  const ls=computeLights();
+  const byZone={};
+  ls.forEach(l=>{ byZone[l.zone]=(byZone[l.zone]||0)+1; });
+
+  let h=`<div class="selname">灯位清单</div>
+  <div class="selnote">象鼻灯 ${ls.length} 只，开孔 ${LG.hole}mm，${LG.watt}W，${LG.cct}K，Ra≥${LG.cri}。
+  灯体可俯仰 0–${LG.tiltMax}°、水平旋转 360°。吊顶 ${SHOP.H}，目标高 ${LG.aimH}，落差 ${drop()}，当前俯仰 ${tiltFor(LG.wallOff).toFixed(0)}°。</div>`;
+
+  h+=`<div class="sec">分区统计</div><table class="sched"><tr><th>区域</th><th>数量</th><th>光束角</th><th>实际间距</th></tr>`;
+  Object.keys(byZone).forEach(z=>{
+    const beam = /衣架/.test(z)?LG.beamRail : (/模特|首饰|镜/.test(z)?LG.beamSpot:LG.beamGen);
+    const zl = ls.filter(l=>l.zone===z);
+    const spanX=Math.max(...zl.map(l=>l.x))-Math.min(...zl.map(l=>l.x));
+    const spanY=Math.max(...zl.map(l=>l.y))-Math.min(...zl.map(l=>l.y));
+    const vals = spanY>=spanX ? zl.map(l=>l.y).sort((a,b)=>a-b) : zl.map(l=>l.x).sort((a,b)=>a-b);
+    let sp='—';
+    if(vals.length>1){
+      const gaps=[]; for(let i=1;i<vals.length;i++) gaps.push(vals[i]-vals[i-1]);
+      const avg=gaps.reduce((a,b)=>a+b,0)/gaps.length;
+      sp = (Math.max(...gaps)-Math.min(...gaps)<5) ? Math.round(avg)+'' : Math.round(Math.min(...gaps))+'~'+Math.round(Math.max(...gaps));
+    }
+    h+=`<tr><td>${z}</td><td>${byZone[z]}</td><td>${beam}°</td><td>${sp}</td></tr>`;
+  });
+  h+=`</table>`;
+
+  h+=`<div class="tot">合计 <b>${ls.length} 只</b> · 总功率 <b>${ls.length*LG.watt}W</b> · 单回路 16A 足够</div>`;
+
+  h+=`<div class="sec">逐灯坐标（原点＝后墙左端）</div><table class="sched"><tr><th>#</th><th>区域</th><th>X</th><th>Y</th><th>离墙</th></tr>`;
+  ls.forEach((l,i)=>{
+    const off = l.aimX!==undefined ? Math.round(Math.abs(l.aimX-l.x)) : '—';
+    h+=`<tr><td>${i+1}</td><td>${l.zone}</td><td>${Math.round(l.x)}</td><td>${Math.round(l.y)}</td><td>${off}</td></tr>`;
+  });
+  h+=`</table>`;
+
+  h+=`<div class="sec">设计依据</div>
+  <div class="hint">
+  · <b>光斑直径</b>＝2×(吊顶−目标高)×tan(光束角/2)。吊顶${SHOP.H}、目标高${LG.aimH}、落差${drop()}mm 时：<br>
+  　${LG.beamRail}°→${Math.round(2*beamRadius(LG.beamRail))}mm；${LG.beamSpot}°→${Math.round(2*beamRadius(LG.beamSpot))}mm；${LG.beamGen}°→${Math.round(2*beamRadius(LG.beamGen))}mm<br>
+  · <b>女装肩宽约 450–500</b>，光斑 500–550 正好一件一个，两侧自然压暗，这是"聚光打款"而不是"照亮一片"<br>
+  · <b>灯离墙 ${LG.wallOff}</b>＋俯仰 ${tiltFor(LG.wallOff).toFixed(0)}°：光束上沿扫到墙上形成柔和亮带做背景，下沿斜切衣领肩线，布料纹理才出得来<br>
+  · <b>为什么不能只洗墙</b>：2m 杆挂 18–22 件，衣服几乎贴满，墙被挡住，洗墙光透不过去<br>
+  · <b>为什么不能垂直下打</b>：3.3m 原顶落差 2m，24° 光斑 850mm 比一件衣服还宽，全散<br>
+  · <b>全身镜</b>：灯装镜前 600–800mm，绝不能在镜顶，否则眼窝下巴出阴影<br>
+  · <b>首饰柜</b>：窄束＋Ra≥95，宽束会把玻璃台面照成一片反光<br>
+  · <b>同批次采购</b>：不同批次色温可差 200–300K，一面墙看得出色差
+  </div>`;
+
+  body.innerHTML=h;
+}
+
+function syncListSizes(){
+  body.querySelectorAll('.li').forEach(n=>{
+    const it=ITEMS.find(i=>i.id===n.getAttribute('data-sel'));
+    if(!it) return;
+    const sz=n.querySelector('.sz');
+    if(sz) sz.textContent=`${it.w}×${it.d}`;
+  });
+}
+function syncForm(){
+  const it=ITEMS.find(i=>i.id===selId); if(!it) return;
+  ['x','y','w','d','h','rail','oh'].forEach(k=>{
+    const inp=document.getElementById('f_'+k);
+    if(!inp||document.activeElement===inp) return;
+    const key = k==='oh'?'overhang':k;
+    if(it[key]!==undefined) inp.value=it[key];
+  });
+}
+function select(id){ selId=(selId===id)?null:id; dimSel=null; redraw(); renderPanel(); }
+
+/* ══════════════ 存储 ══════════════ */
+let saveTimer=null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify({v:7, SHOP, LG, ITEMS}));
+      flash('已保存');
+    }catch(e){}
+  }, 400);
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(!raw) return false;
+    const d=JSON.parse(raw);
+    if(!d||d.v!==7) return false;
+    if(d.SHOP) Object.assign(SHOP,d.SHOP);
+    if(d.LG) Object.assign(LG,d.LG);
+    if(d.ITEMS) ITEMS=d.ITEMS;
+    return true;
+  }catch(e){ return false; }
+}
+function flash(msg){
+  const el=document.getElementById('subHdr');
+  el.dataset.orig=`${SHOP.W}×${SHOP.D}`;
+  el.textContent=msg;
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.textContent=`${SHOP.W}×${SHOP.D}`;},1200);
+}
+
+/* ══════════════ 工具栏 ══════════════ */
+document.getElementById('btnGrid').onclick=e=>{showGrid=!showGrid;e.target.classList.toggle('on',showGrid);drawBase();};
+document.getElementById('btnDim').onclick=e=>{showDim=!showDim;e.target.classList.toggle('on',showDim);drawDims();};
+document.getElementById('btnAisle').onclick=e=>{showAisle=!showAisle;e.target.classList.toggle('on',showAisle);drawAisle();};
+document.getElementById('btnRef').onclick=e=>{showRef=!showRef;e.target.classList.toggle('on',showRef);drawItems();};
+document.getElementById('btnLight').onclick=e=>{LG.show=!LG.show;e.target.classList.toggle('on',LG.show);drawLights();drawBeams();drawSpacing();save();};
+document.getElementById('btnSpacing').onclick=e=>{LG.showSpacing=!LG.showSpacing;e.target.classList.toggle('on',LG.showSpacing);drawSpacing();save();};
+document.getElementById('btnBeam').onclick=e=>{LG.showBeam=!LG.showBeam;e.target.classList.toggle('on',LG.showBeam);drawBeams();save();};
+document.getElementById('tabElem').onclick=()=>{panelMode='elem';renderPanel();};
+document.getElementById('tabLight').onclick=()=>{panelMode='light';renderPanel();};
+
+document.getElementById('btnReset').onclick=()=>{
+  if(!confirm('恢复初始布局与参数？当前修改会丢失。')) return;
+  SHOP=JSON.parse(JSON.stringify(SHOP0));
+  LG=JSON.parse(JSON.stringify(LIGHT0));
+  ITEMS=JSON.parse(JSON.stringify(ITEMS0));
+  selId=null; dimSel=null; showRef=false;
+  document.getElementById('btnRef').classList.remove('on');
+  try{localStorage.removeItem(LS_KEY);}catch(e){}
+  setViewBox(); redraw(); renderPanel(); validate();
+};
+
+document.getElementById('btnCsv').onclick=()=>{
+  const SRC={cad:'图上标注',std:'行业标准',guess:'待确认',fix:'固定结构',buy:'已购实物'};
+  const rows=[['元素','宽mm','深mm','高mm','距左墙X','距后墙Y','杆长','占墙','来源','说明']];
+  ITEMS.filter(i=>!i.isRef).forEach(i=>{
+    rows.push([i.name,i.w,i.d,i.h,i.x,i.y,i.rail||'',i.rail?i.rail+i.overhang*2:'',SRC[i.src],(i.note||'').replace(/,/g,'，').replace(/\n/g,' ')]);
+  });
+  rows.push([]);
+  rows.push(['—— 灯位清单 ——']);
+  rows.push(['序号','区域','X','Y','离墙mm','光束角','功率W']);
+  const tilt=tiltFor(LG.wallOff);
+  computeLights().forEach((l,i)=>{
+    const off=l.aimX!==undefined?Math.round(Math.abs(l.aimX-l.x)):'';
+    rows.push([i+1,l.zone,Math.round(l.x),Math.round(l.y),off,
+      (/衣架/.test(l.zone)?LG.beamRail:(/模特|首饰|镜/.test(l.zone)?LG.beamSpot:LG.beamGen))+'°',LG.watt]);
+  });
+  rows.push([]);
+  rows.push(['参数','吊顶'+SHOP.H,'开孔'+LG.hole+'mm','色温'+LG.cct+'K','Ra≥'+LG.cri,'俯仰'+tilt.toFixed(0)+'°','可调0-'+LG.tiltMax+'°']);
+  dl('\ufeff'+rows.map(r=>r.join(',')).join('\n'),'CherryStudio_平面与灯位清单.csv','text/csv');
+};
+
+document.getElementById('btnJson').onclick=()=>{
+  dl(JSON.stringify({v:7,SHOP,LG,ITEMS},null,2),'CherryStudio_参数.json','application/json');
+};
+
+document.getElementById('btnLoad').onclick=()=>{
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='.json';
+  inp.onchange=()=>{
+    const f=inp.files[0]; if(!f) return;
+    const fr=new FileReader();
+    fr.onload=()=>{
+      try{
+        const d=JSON.parse(fr.result);
+        if(d.SHOP) Object.assign(SHOP,d.SHOP);
+        if(d.LG) Object.assign(LG,d.LG);
+        if(d.ITEMS) ITEMS=d.ITEMS;
+        setViewBox(); redraw(); renderPanel(); validate(); save();
+      }catch(e){ alert('文件格式不对'); }
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+};
+
+/* ══════════════ 高清导出 ══════════════ */
+document.getElementById('btnPng').onclick=()=>{
+  const vb=svg.getAttribute('viewBox').split(/[\s,]+/).map(Number);
+  const vx=vb[0], vy=vb[1], vw=vb[2], vh=vb[3];
+
+  const clone=svg.cloneNode(true);
+  clone.setAttribute('xmlns',NS);
+  clone.setAttribute('width',vw);
+  clone.setAttribute('height',vh);
+  clone.setAttribute('viewBox',`${vx} ${vy} ${vw} ${vh}`);
+
+  const s=new XMLSerializer().serializeToString(clone);
+  const svgUrl='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);
+
+  const img=new Image();
+  img.onload=()=>{
+    // 按图面宽度 6000px 输出（mm→px 约 1.11 倍），文字 62 号导出后约 69px，绝对清晰
+    const scale=6000/vw;
+    const c=document.createElement('canvas');
+    c.width=Math.round(vw*scale);
+    c.height=Math.round(vh*scale);
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,c.width,c.height);
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img,0,0,c.width,c.height);
+
+    c.toBlob(b=>{
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(b);
+      a.download=`CherryStudio_平面灯位_${c.width}x${c.height}.png`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    },'image/png');
+  };
+  img.onerror=()=>alert('导出失败，可能是浏览器限制了本地文件读取。改用系统截图。');
+  img.src=svgUrl;
+};
+
+function dl(text,name,mime){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:mime+';charset=utf-8'}));
+  a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+
+/* ══════════════ 启动 ══════════════ */
+function redraw(){ drawBase(); drawAisle(); drawItems(); drawBeams(); drawLights(); drawSpacing(); drawDims(); drawAnno(); }
+
+load();
+setViewBox();
+document.getElementById('subHdr').textContent=`${SHOP.W}×${SHOP.D}`;
+document.getElementById('btnBeam').classList.toggle('on',LG.showBeam);
+document.getElementById('btnSpacing').classList.toggle('on',LG.showSpacing);
+document.getElementById('btnLight').classList.toggle('on',LG.show);
+redraw(); renderPanel(); validate();
+
+window.addEventListener('resize',()=>{ setViewBox(); });
+
+})();
+</script>
+</body>
+</html>
