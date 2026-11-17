@@ -459,17 +459,14 @@ function computeLights(){
 
       const wallX = ri===1 ? undefined : (ri===0 ? 0 : W);
 
-      /* 沙发/座位正上方不直射头顶：位置不动（保持三排对齐），只把光往前投，
-         落在人的前方地面·沙发前沿外 300，坐着的人不在光束里，也就不晃眼。 */
-      const seat=ITEMS.find(i=>(i.seat||i.id==='sofa') && inRect(x,y,i));
+      /* ── 中排：一律垂直向下，不许斜 ──
+         曾经为了「避免坐沙发时头顶直射」把这盏灯歪 27° 往左投，
+         结果光斑中心跑到 x=1500（沙发左缘外 300mm），坐的人脸反而变暗，
+         还把斜光甩进左侧走道，破坏三排均匀。
+         防晃眼靠灯具的遮光角（深防眩 35°，仰角 55° 以上才看得见光源），
+         不靠把灯歪掉——人正常坐着的视线是 0–30°，根本看不到 3m 高的灯。 */
       if(ri===1){
-        if(seat){
-          const aimX = seat.x - 300;
-          add(x,y,LG.beamGen,'中排·前投', {aimX, tilt:tiltFor(Math.abs(x-aimX))});
-        }else{
-          /* 中排：45° 宽束垂直下打，罩中间通道 + 沙发 + 收银 */
-          add(x,y,LG.beamGen,'中排');
-        }
+        add(x,y,LG.beamGen,'中排');
       }else{
         /* 左右边排：30° 扫墙洗衣服，向墙倾 ~21°，上沿在墙上形成背景亮带 */
         add(x,y,LG.beamRail, ri===0?'左边排':'右边排', {wallX, aimX:wallX, tilt:LG.tiltSide});
@@ -1093,13 +1090,19 @@ function renderPanel(){
         <div class="frow narrow"><label>目标高</label><input type="number" id="l_ah" value="${LG.aimH}" step="50"><span class="unit">mm</span></div>
         <div class="frow narrow"><label>功率</label><input type="number" id="l_w" value="${LG.watt}" step="1"><span class="unit">W</span></div>
       </div>
+      <div class="hint" style="margin:8px 0 4px;font-weight:600;color:#6b5526">光束角（光锥张开多少度）</div>
       <div class="g2">
-        <div class="frow narrow"><label>边排束</label><input type="number" id="l_bra" value="${LG.beamRail}" step="3"><span class="unit">°</span></div>
-        <div class="frow narrow"><label>中排束</label><input type="number" id="l_bgn" value="${LG.beamGen}" step="3"><span class="unit">°</span></div>
+        <div class="frow narrow"><label>边排光束角</label><input type="number" id="l_bra" value="${LG.beamRail}" step="3"><span class="unit">°</span></div>
+        <div class="frow narrow"><label>中排光束角</label><input type="number" id="l_bgn" value="${LG.beamGen}" step="3"><span class="unit">°</span></div>
       </div>
+      <div class="hint" style="margin:8px 0 4px;font-weight:600;color:#6b5526">俯仰角（灯体歪多少度）</div>
       <div class="g2">
         <div class="frow narrow"><label>边排俯仰</label><input type="number" id="l_til" value="${LG.tiltSide}" step="1"><span class="unit">°</span></div>
-        <div class="frow narrow"><label>重点束</label><input type="number" id="l_bsp" value="${LG.beamSpot}" step="3"><span class="unit">°</span></div>
+        <div class="frow narrow"><label>中排俯仰</label><input type="text" value="0（垂直）" disabled><span class="unit">°</span></div>
+      </div>
+      <div class="g2">
+        <div class="frow narrow"><label>重点光束角</label><input type="number" id="l_bsp" value="${LG.beamSpot}" step="3"><span class="unit">°</span></div>
+        <div class="frow narrow"><label>最大俯仰</label><input type="number" id="l_tmax" value="${LG.tiltMax}" step="5"><span class="unit">°</span></div>
       </div>
       <div class="g2">
         <div class="frow narrow"><label>开孔</label><input type="number" id="l_ho" value="${LG.hole}" step="5"><span class="unit">mm</span></div>
@@ -1113,9 +1116,20 @@ function renderPanel(){
         ${beamRadius(LG.beamRail)+beamRadius(LG.beamGen)>=SHOP.W/2-LG.sideOff?'接得上':'有暗带'}</b><br>
         边排俯仰 <b>${tiltSide().toFixed(0)}°</b>（可调 0–${LG.tiltMax}°）　落差 <b>${drop()}mm</b>
       </div>
+      <div class="sec">两个角别搞混</div>
+      <div class="hint">
+        <b>① 光束角 = 光锥张开多大</b>（不是灯歪了）。中排 ${LG.beamGen}° 指光锥张开 ${LG.beamGen}°，
+        灯体本身是<b>笔直朝下</b>的，光斑呈以灯心为圆心的正圆、直径 ${Math.round(2*beamRadius(LG.beamGen))}mm。<br>
+        <b>② 俯仰角 = 灯体歪多少</b>。只有两边排要歪，各向自己那面墙倾 ${tiltSide().toFixed(0)}°：左排往左歪、右排往右歪。
+        <b>中排俯仰永远是 0°，笔直向下，不偏左也不偏右。</b><br>
+        图上灯位旁边那根橙色虚线＝打光方向。中排各灯没有这根线（因为垂直向下，没有方向可言），
+        只有两边排才有，指向各自墙面。<br>
+        <b>为什么中排要 60° 这么宽</b>：中排管的是中间这条 1725 宽的带（沙发、首饰柜、收银台、两条走道），
+        窄光束罩不满，会在两侧各留一条黑带。60° 在 1700 落差下罩 1963，正好铺满。<br>
+        <b>想更聚光</b>：把中排光束角改小（如 45°），但地面暗带会立刻出现，面板会红字提示差多少 mm。
+      </div>
       <div class="hint" style="margin:4px 0 8px">
-        <b>中排和边排的距离感，由光束角决定，不是由排距决定。</b>判据：边排光斑半径 ＋ 中排光斑半径
-        ≥ 排距 ${Math.round(SHOP.W/2-LG.sideOff)}，两排的光才接得上、地面才没有暗带。
+        <b>中排和边排的距离感，由光束角决定，不是由排距决定。</b>判据：把每排光锥投影到地面，看有没有缝。
         排距本身 = 店宽/2 − 离墙，由店宽焊死；想让中间更亮，加光束角，别挪灯。
       </div>
       <div class="hint" style="margin-top:6px">修改后自动保存到本机，下次打开自动恢复。</div>`;
@@ -1195,6 +1209,8 @@ function bindInputs(){
   num('l_bra',v=>LG.beamRail=Math.max(6,Math.min(120,v)));
   num('l_bgn',v=>LG.beamGen=Math.max(6,Math.min(120,v)));
   num('l_til',v=>LG.tiltSide=Math.max(0,Math.min(LG.tiltMax,v)));
+  num('l_tmax',v=>{LG.tiltMax=Math.max(5,Math.min(90,v));
+                   LG.tiltSide=Math.min(LG.tiltSide,LG.tiltMax);});
   num('l_bsp',v=>LG.beamSpot=v);
   num('l_ho',v=>LG.hole=v); num('l_cct',v=>LG.cct=v);
 
