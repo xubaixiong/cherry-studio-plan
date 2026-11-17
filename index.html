@@ -278,7 +278,7 @@ let dimSel = null;
 let showGrid=true, showDim=true, showAisle=true, showRef=false;
 let panelMode = 'elem';
 const SNAP = 25;
-const LS_KEY = 'cherry-studio-plan-v23';
+const LS_KEY = 'cherry-studio-plan-v24';
 
 /* ══════════════ SVG ══════════════ */
 const svg = document.getElementById('svg');
@@ -438,23 +438,22 @@ function computeLights(){
     L.push(Object.assign({x,y,beam,r,zone},extra||{}));
   };
 
+  /* ══════════ 一、营业区：三排对齐网格 ══════════
+     ⚠ 关键：卫生间、试衣间是独立隔断的封闭房间，它们的顶面属于房间自己，
+       不是营业区吊顶的一部分。所以营业区三排绝不能"穿过"这两个房间——
+       落在房间里的格点必须整个删掉，而不是把光束改小硬留在网格里。
+       更不能用外面三排的余光去照房间（隔墙挡着，照不进去）。 */
   rows.forEach((x,ri)=>{
     cols.forEach(y=>{
-      /* 落在卫生间/试衣间里的灯：不洗墙，改 36° 垂直下打做小间基础照明。
-         位置照样不动——所以三排还是完全对齐，只是光束角按服务对象切换。 */
+      if(inRect(x,y,wc) || inRect(x,y,ft)) return;   /* ← 房间顶上不布营业区的灯 */
+
       const wallX = ri===1 ? undefined : (ri===0 ? 0 : W);
-      const inRoom = inRect(x,y,wc) || inRect(x,y,ft);
+
       /* 沙发/座位正上方不直射头顶：位置不动（保持三排对齐），只把光往前投，
-         落在人的前方地面·沙发前沿外 250，坐着的人不在光束里，也就不晃眼。 */
+         落在人的前方地面·沙发前沿外 300，坐着的人不在光束里，也就不晃眼。 */
       const seat=ITEMS.find(i=>(i.seat||i.id==='sofa') && inRect(x,y,i));
-      if(inRoom){
-        /* 卫生间/试衣间里：45° 垂直下打做小间照明，位置不动 ⇒ 三排依旧对齐 */
-        add(x,y,LG.beamGen, ri===0?'左边排':'右边排', {wallX, room:true});
-      }else if(ri===1){
+      if(ri===1){
         if(seat){
-          /* 沙发正上方不照头顶：灯位不动（保持三排对齐），把光向前投到坐的人
-             前方地面（沙发前沿外 300），人眼不在光束里。坐高 420、吊顶 3000，
-             斜投后落点 x≈沙发前沿，正好照小腿与地台，不晃眼。 */
           const aimX = seat.x - 300;
           add(x,y,LG.beamGen,'中排·前投', {aimX, tilt:tiltFor(Math.abs(x-aimX))});
         }else{
@@ -468,6 +467,21 @@ function computeLights(){
     });
   });
 
+  /* ══════════ 二、独立房间：各自单独布灯 ══════════
+     卫生间 1650×1200、试衣间 1650×1100，都是砌体隔断的封闭小间，
+     顶面独立、开关独立。各配 1 只 4000K 筒灯（比主光 3500K 冷一点，
+     小间里看肤色、看衣服本色更准），45° 下打，独立回路控制。
+     这两只灯不属于三排网格，不参与"对齐"约束——它们属于房间。 */
+  const ROOMS=[
+    {it:wc, zone:'卫生间·独立', cct:4000},
+    {it:ft, zone:'试衣间·独立', cct:4000}
+  ];
+  ROOMS.forEach(r=>{
+    if(!r.it) return;
+    const cx=r.it.x+r.it.w/2, cy=r.it.y+r.it.d/2;
+    add(cx,cy,LG.beamGen,r.zone,{room:true,cct:r.cct});
+  });
+
   return L;
 }
 
@@ -476,10 +490,15 @@ function drawBeams(){
   gBeam.style.display = (LG.show&&LG.showBeam)?'':'none';
   if(!LG.show||!LG.showBeam) return;
   computeLights().forEach(l=>{
+    /* 独立房间的灯用青灰调，和营业区暖黄一眼区分开：
+       让人看图就明白「这两只是房间自己的，不属于三排」 */
+    const isRoom=!!l.room;
     mk('circle',{cx:l.x,cy:l.y,r:l.r,
-      fill:l.beam===LG.beamSpot?'rgba(255,196,70,.20)':(l.beam===LG.beamRail?'rgba(255,214,120,.15)':'rgba(255,232,170,.11)'),
-      stroke:l.beam===LG.beamSpot?'#e8a72c':(l.beam===LG.beamRail?'#dfb85a':'#e2c98a'),
-      'stroke-width':4,'stroke-opacity':.55,'stroke-dasharray':'16 14'},gBeam);
+      fill: isRoom ? 'rgba(150,200,205,.16)' :
+        (l.beam===LG.beamSpot?'rgba(255,196,70,.20)':(l.beam===LG.beamRail?'rgba(255,214,120,.15)':'rgba(255,232,170,.11)')),
+      stroke: isRoom ? '#4f9aa0' :
+        (l.beam===LG.beamSpot?'#e8a72c':(l.beam===LG.beamRail?'#dfb85a':'#e2c98a')),
+      'stroke-width': isRoom?6:4,'stroke-opacity':.55,'stroke-dasharray': isRoom?'24 12':'16 14'},gBeam);
   });
 }
 
@@ -500,19 +519,32 @@ function drawLights(){
       mk('line',{x1:l.x,y1:l.y,x2:l.x,y2:l.aimY,stroke:'#c9922b','stroke-width':9,'stroke-dasharray':'20 14','stroke-opacity':.75},g);
       mk('circle',{cx:l.x,cy:l.aimY,r:12,fill:'#c9922b'},g);
     }
-    mk('circle',{cx:l.x,cy:l.y,r:62,fill:l.beam===LG.beamSpot?'#f0b83a':(l.beam===LG.beamRail?'#f3cd6e':'#f0d79a'),stroke:'#8a6a22','stroke-width':8},g);
-    mk('circle',{cx:l.x,cy:l.y,r:24,fill:'#fff8e0'},g);
-    /* 灯号加白描边：灯位图层在最上层，压在元素名上也能读清 */
-    tx(g,l.x,l.y+126,String(i+1),{fill:'#7a5c18','font-size':50,'text-anchor':'middle','font-weight':700,
-      'paint-order':'stroke',stroke:'#fff','stroke-width':11,'stroke-opacity':.95});
+    if(l.room){
+      /* 独立房间灯：青色 + 外圈虚线环，图上和营业区三排明显不同 */
+      mk('circle',{cx:l.x,cy:l.y,r:62,fill:'#8cc6cb',stroke:'#2f7378','stroke-width':8},g);
+      mk('circle',{cx:l.x,cy:l.y,r:86,fill:'none',stroke:'#2f7378','stroke-width':6,'stroke-dasharray':'18 14','stroke-opacity':.8},g);
+      mk('circle',{cx:l.x,cy:l.y,r:24,fill:'#f2fbfc'},g);
+      tx(g,l.x,l.y+126,String(i+1),{fill:'#1f5d61','font-size':50,'text-anchor':'middle','font-weight':700,
+        'paint-order':'stroke',stroke:'#fff','stroke-width':11,'stroke-opacity':.95});
+    }else{
+      mk('circle',{cx:l.x,cy:l.y,r:62,fill:l.beam===LG.beamSpot?'#f0b83a':(l.beam===LG.beamRail?'#f3cd6e':'#f0d79a'),stroke:'#8a6a22','stroke-width':8},g);
+      mk('circle',{cx:l.x,cy:l.y,r:24,fill:'#fff8e0'},g);
+      /* 灯号加白描边：灯位图层在最上层，压在元素名上也能读清 */
+      tx(g,l.x,l.y+126,String(i+1),{fill:'#7a5c18','font-size':50,'text-anchor':'middle','font-weight':700,
+        'paint-order':'stroke',stroke:'#fff','stroke-width':11,'stroke-opacity':.95});
+    }
   });
 
-  tx(gLight,SHOP.W/2,SHOP.D+PADBOT-230,
-    `象鼻灯 ${ls.length} 只（三排 × ${gridCols().n} 列）· 开孔${LG.hole} · ${LG.watt}W/只 · ${ls.length*LG.watt}W · ${LG.cct}K · Ra≥${LG.cri} · 边排俯仰 ${tiltFor(LG.sideOff).toFixed(0)}°（可调0–${LG.tiltMax}°）`,
-    {fill:'#8a6a22','font-size':66,'text-anchor':'middle','font-weight':600});
-  tx(gLight,SHOP.W/2,SHOP.D+PADBOT-110,
-    `三排对齐：左/中/右 X=${Math.round(gridRows()[0])}/${Math.round(gridRows()[1])}/${Math.round(gridRows()[2])} · 排距 ${Math.round(SHOP.W/2-LG.sideOff)}（左右等距）· 灯距 ${Math.round(gridCols().step)}`,
-    {fill:'#a89a68','font-size':58,'text-anchor':'middle'});
+  const nRoom=ls.filter(l=>l.room).length, nShop=ls.length-nRoom;
+  tx(gLight,SHOP.W/2,SHOP.D+PADBOT-330,
+    `象鼻灯 ${ls.length} 只 ＝ 营业区 ${nShop} 只（三排 × ${gridCols().n} 列）＋ 独立房间 ${nRoom} 只 · 开孔${LG.hole} · ${LG.watt}W/只 · ${ls.length*LG.watt}W · Ra≥${LG.cri}`,
+    {fill:'#8a6a22','font-size':64,'text-anchor':'middle','font-weight':600});
+  tx(gLight,SHOP.W/2,SHOP.D+PADBOT-225,
+    `营业区三排：左/中/右 X=${Math.round(gridRows()[0])}/${Math.round(gridRows()[1])}/${Math.round(gridRows()[2])} · 排距 ${Math.round(SHOP.W/2-LG.sideOff)}（左右等距）· 灯距 ${Math.round(gridCols().step)} · 主光 ${LG.cct}K · 边排俯仰 ${tiltFor(LG.sideOff).toFixed(0)}°（可调0–${LG.tiltMax}°）`,
+    {fill:'#a89a68','font-size':56,'text-anchor':'middle'});
+  tx(gLight,SHOP.W/2,SHOP.D+PADBOT-120,
+    `卫生间 / 试衣间：砌体隔断的独立封闭空间，各配 1 只 4000K 筒灯、独立开关（青色圆点），不并入三排网格`,
+    {fill:'#2f7378','font-size':56,'text-anchor':'middle','font-weight':600});
 }
 
 /* ══════════════ 灯距 / 离墙距离 标注 ══════════════ */
@@ -820,7 +852,8 @@ function validate(){
   else ok.push('门口通道畅通');
 
   const ls=computeLights();
-  ok.push(`灯 ${ls.length} 只 / ${ls.length*LG.watt}W`);
+  const nRoom=ls.filter(l=>l.room).length, nShop=ls.length-nRoom;
+  ok.push(`灯 ${ls.length} 只 / ${ls.length*LG.watt}W（营业区 ${nShop} + 独立房间 ${nRoom}）`);
 
   // 灯距过近检查
   let near=0;
@@ -834,7 +867,7 @@ function validate(){
   // 灯是否落在衣架占地内（会被吊架/衣服挡住，等于白装）
   const racks=ITEMS.filter(i=>i.rail);
   const wasted=[];
-  ls.forEach((l,i)=>{
+  ls.filter(l=>!l.room).forEach((l,i)=>{
     racks.forEach(r=>{
       if(l.x>=r.x&&l.x<=r.x+r.w&&l.y>=r.y&&l.y<=r.y+r.d) wasted.push(`#${i+1}(${l.zone})`);
     });
@@ -856,10 +889,24 @@ function validate(){
   if(Math.abs((rows[1]-rows[0])-(rows[2]-rows[1]))>1) msgs.push(`中排未居中：左右排距不等`);
   else ok.push(`三排等距 ${Math.round(pitch)}`);
 
-  // ② 三排必须共用同一组列坐标：每个 Y 在三排上都存在
-  const ysOf=r=>ls.filter(l=>Math.abs(l.x-rows[r])<.5).map(l=>Math.round(l.y)).sort((a,b)=>a-b);
-  const y0=ysOf(0).join(','), y1=ysOf(1).join(','), y2=ysOf(2).join(',');
-  if(y0!==y1||y1!==y2||!y0) msgs.push(`三排列坐标不一致，未对齐`);
+  /* ② 三排必须共用同一组列坐标。
+     ⚠ 卫生间/试衣间顶面属于房间自己，营业区左排在那里本就不该有灯，
+        所以比对时要把"落在房间内的格点"排除掉，否则会误报未对齐。 */
+  const banned=(x,y)=>{
+    const a=ITEMS.find(i=>i.id==='wc'), b=ITEMS.find(i=>i.id==='fit');
+    return inRect(x,y,a) || inRect(x,y,b);
+  };
+  let misalign=0, compared=0;
+  cols.forEach(y=>{
+    const want=rows.map((x,ri)=>({x,ri,need:!banned(x,y)}));
+    want.forEach(w=>{
+      if(!w.need) return;
+      compared++;
+      const has=ls.some(l=>Math.abs(l.x-w.x)<.5 && Math.abs(l.y-y)<.5);
+      if(!has) misalign++;
+    });
+  });
+  if(misalign) msgs.push(`三排有 ${misalign} 处该有灯却没有，未对齐`);
   else ok.push(`三排${n}列对齐`);
 
   // ③ 灯距必须均匀（均分后理论上全等，容差 2mm）
@@ -872,6 +919,17 @@ function validate(){
   const sRail=2*beamRadius(LG.beamRail);
   if(sRail<step) msgs.push(`边排光斑 ${Math.round(sRail)} ＜ 灯距 ${Math.round(step)}，光带有暗断`);
   else ok.push(`光斑 ${Math.round(sRail)} 连片`);
+
+  /* ⑤ 独立房间：每间必须自己有一盏灯，且灯落在自己房间内。
+        房间是砌体隔断的封闭空间，靠外面三排的余光根本照不进去（有隔墙挡着），
+        必须独立布灯、独立开关。这一条不能省，否则试衣间/卫生间会是黑的。 */
+  ['wc','fit'].forEach(id=>{
+    const r=ITEMS.find(i=>i.id===id); if(!r) return;
+    const mine=ls.filter(l=>l.room && l.x>=r.x && l.x<=r.x+r.w && l.y>=r.y && l.y<=r.y+r.d);
+    if(!mine.length) msgs.push(`${r.name}无独立灯（隔墙封闭，外部灯照不进去）`);
+    else if(mine.length>1) msgs.push(`${r.name}有 ${mine.length} 盏灯，${r.w}×${r.d} 小间 1 盏即可`);
+    else ok.push(`${r.name}独立灯 ${mine[0].cct}K`);
+  });
 
   /* 顶栏只放最关键的几项，其余在灯表里看 */
   const KEY=/三排|灯距|光斑|灯 /;
@@ -1069,26 +1127,34 @@ function renderLightTable(){
   const rows=gridRows();
   const pitch=SHOP.W/2-LG.sideOff;
 
-  let h=`<div class="selname">灯位清单 · 三排对齐</div>
-  <div class="selnote">象鼻灯 ${ls.length} 只，开孔 ${LG.hole}mm，${LG.watt}W，${LG.cct}K，Ra≥${LG.cri}。
-  三排沿店铺长度方向纵向排列：边排离墙 ${LG.sideOff}，中排居中，排距 ${Math.round(pitch)}（左右等距）。
-  ${n} 列 × 3 排，实际灯距 ${Math.round(step)}。吊顶 ${SHOP.H}，目标高 ${LG.aimH}，落差 ${drop()}，
-  边排俯仰 ${tiltFor(LG.sideOff).toFixed(0)}°（可调 0–${LG.tiltMax}°）。</div>`;
+  const lsRoom=ls.filter(l=>l.room), lsShop=ls.filter(l=>!l.room);
+  let h=`<div class="selname">灯位清单 · 三排 + 独立房间</div>
+  <div class="selnote">象鼻灯 ${ls.length} 只 ＝ 营业区 <b>${lsShop.length}</b> 只（三排网格）＋ 独立房间 <b>${lsRoom.length}</b> 只。
+  开孔 ${LG.hole}mm，${LG.watt}W，Ra≥${LG.cri}。营业区主光 ${LG.cct}K，三排沿长度方向：边排离墙 ${LG.sideOff}，
+  中排居中，排距 ${Math.round(pitch)}（左右等距），${n} 列，灯距 ${Math.round(step)}。
+  <b>卫生间和试衣间是砌体隔断的封闭房间，顶面独立，各自单独布灯 4000K、单独开关</b>，不走三排。</div>`;
 
   /* 三排几何一览 */
   h+=`<div class="sec">三排定位</div><table class="sched">
     <tr><th>排</th><th>X 坐标</th><th>光束角</th><th>服务对象</th></tr>
-    <tr><td>左排</td><td>${Math.round(rows[0])}</td><td>${LG.beamRail}°</td><td>左墙衣架·洗墙</td></tr>
+    <tr><td>左排</td><td>${Math.round(rows[0])}</td><td>${LG.beamRail}°</td><td>左墙衣架·洗墙（后段被卫生间/试衣间占位，无灯）</td></tr>
     <tr><td>中排</td><td>${Math.round(rows[1])}</td><td>${LG.beamGen}°</td><td>通道·沙发·收银</td></tr>
     <tr><td>右排</td><td>${Math.round(rows[2])}</td><td>${LG.beamRail}°</td><td>右墙衣架·洗墙</td></tr>
   </table>
   <div class="tot">排距 <b>${Math.round(pitch)}</b>（左中＝中右，全等）　共 <b>${n}</b> 列　灯距 <b>${Math.round(step)}</b></div>`;
 
-  /* 列坐标 */
-  h+=`<div class="sec">列坐标（三排共用）</div><table class="sched">
+  /* 列坐标：营业区三排共用；被房间占掉的格点显式标出 */
+  const wcI=ITEMS.find(i=>i.id==='wc'), ftI=ITEMS.find(i=>i.id==='fit');
+  const bannedAt=(x,y)=>inRect(x,y,wcI)||inRect(x,y,ftI);
+  h+=`<div class="sec">列坐标（营业区三排共用同一组 Y）</div><table class="sched">
     <tr><th>列</th>${cols.map((_,i)=>`<th>${i+1}</th>`).join('')}</tr>
     <tr><td>Y</td>${cols.map(c=>`<td>${Math.round(c)}</td>`).join('')}</tr>
-  </table>`;
+    <tr><td>左排</td>${cols.map(c=>`<td>${bannedAt(rows[0],c)?'—':Math.round(rows[0])}</td>`).join('')}</tr>
+    <tr><td>中排</td><td colspan="${cols.length}">三排共用 ${Math.round(rows[1])}，全列都有灯</td></tr>
+    <tr><td>右排</td><td colspan="${cols.length}">三排共用 ${Math.round(rows[2])}，全列都有灯</td></tr>
+  </table>
+  <div class="tot">左排第 ${cols.map((c,i)=>bannedAt(rows[0],c)?i+1:null).filter(x=>x).join('、')||'—'} 列被卫生间/试衣间占位 → 该处无营业区灯，
+  房间自己配独立灯（下表）</div>`;
 
   /* 覆盖校验 */
   const spotRail=2*beamRadius(LG.beamRail), spotGen=2*beamRadius(LG.beamGen);
@@ -1109,12 +1175,28 @@ function renderLightTable(){
         <td>${tiltFor(LG.sideOff)<=LG.tiltMax?'✓ 在 0–'+LG.tiltMax+'° 内':'✗ 超出可调角'}</td></tr>
   </table>`;
 
-  h+=`<div class="tot">合计 <b>${ls.length} 只</b> · 总功率 <b>${ls.length*LG.watt}W</b> · 单回路 16A 足够</div>`;
+  /* 独立房间：封闭隔断，独立布灯、独立开关 */
+  h+=`<div class="sec">独立房间 · 单独布灯</div><table class="sched">
+    <tr><th>房间</th><th>尺寸</th><th>灯位</th><th>色温</th><th>控制</th></tr>`;
+  ['wc','fit'].forEach(id=>{
+    const r=ITEMS.find(i=>i.id===id); if(!r) return;
+    const mine=ls.filter(l=>l.room && l.x>=r.x && l.x<=r.x+r.w && l.y>=r.y && l.y<=r.y+r.d);
+    const pos=mine.map(l=>`${Math.round(l.x)},${Math.round(l.y)}`).join(' / ')||'<b style="color:#b8471a">无</b>';
+    h+=`<tr><td>${r.name}</td><td>${r.w}×${r.d}</td><td>${pos}（中心）</td>
+        <td>${mine[0]?mine[0].cct+'K':'—'}</td><td>独立开关</td></tr>`;
+  });
+  h+=`</table>
+  <div class="tot">房间是砌体隔断的封闭空间，<b>外部三排的余光被隔墙挡住，照不进去</b>，必须各自装灯；
+  两只房间灯不属于三排网格，也不参与"对齐"约束。${LG.cct}K 主光偏暖，房间用 <b>4000K</b> 更接近自然光，
+  看肤色和衣服本色更准。</div>`;
 
-  h+=`<div class="sec">逐灯坐标（原点＝后墙左端）</div><table class="sched"><tr><th>#</th><th>排</th><th>X</th><th>Y</th><th>离墙</th></tr>`;
+  h+=`<div class="tot">合计 <b>${ls.length} 只</b>（营业区 ${lsShop.length} ＋ 房间 ${lsRoom.length}）· 总功率 <b>${ls.length*LG.watt}W</b> · 单回路 16A 足够</div>`;
+
+  h+=`<div class="sec">逐灯坐标（原点＝后墙左端）</div><table class="sched"><tr><th>#</th><th>排</th><th>X</th><th>Y</th><th>离墙</th><th>色温</th></tr>`;
   ls.forEach((l,i)=>{
     const off = l.wallX!==undefined ? Math.round(Math.abs(l.wallX-l.x)) : '—';
-    h+=`<tr><td>${i+1}</td><td>${l.zone}</td><td>${Math.round(l.x)}</td><td>${Math.round(l.y)}</td><td>${off}</td></tr>`;
+    const cct = l.cct ? l.cct+'K' : LG.cct+'K';
+    h+=`<tr${l.room?' style="background:#f3f7f8"':''}><td>${i+1}</td><td>${l.zone}</td><td>${Math.round(l.x)}</td><td>${Math.round(l.y)}</td><td>${off}</td><td>${cct}</td></tr>`;
   });
   h+=`</table>`;
 
@@ -1124,7 +1206,7 @@ function renderLightTable(){
   · <b>吊顶 3000、目标高 1300，落差 1700</b>：这个落差下 30° 光斑 911，刚好咬住 900 灯距 ⇒ 边排连成不断的光带，洗衣不出现斑马纹<br>
   · <b>中排必须居中</b>：中排取左右排中点，排距 1725 全等，左右两侧衣服亮度一样；偏一边就会一面亮一面暗<br>
   · <b>中排 45° 而非窄束</b>：中排要照通道地面 + 沙发 + 收银台面，45° 罩 1408，覆盖 82% 排距，过渡带只剩 158<br>
-  · <b>落在卫生间/试衣间的灯改 45° 垂直下打</b>：位置不动保持对齐，只把光束角从洗墙换成下打做小间照明<br>
+  · <b>卫生间/试衣间不并入三排</b>：这两间是砌体隔断的封闭空间，顶面属于房间自己，营业区三排在那里没有格点；两间各自配 1 只 4000K 独立筒灯、独立开关——外部余光被隔墙挡住，照不进去<br>
   · <b>不再单独补灯</b>：原来的镜前灯、收银灯、座位灯全部并入网格——多一只特例灯就会破坏对齐，视觉上就是\"乱\"<br>
   · <b>光斑直径</b>＝2×(吊顶−目标高)×tan(光束角/2)＝2×1700×tan(角/2)<br>
   · <b>同批次采购</b>：不同批次色温可差 200–300K，三排一起看色差最明显
@@ -1158,7 +1240,7 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     try{
-      localStorage.setItem(LS_KEY, JSON.stringify({v:7, SHOP, LG, ITEMS}));
+      localStorage.setItem(LS_KEY, JSON.stringify({v:8, SHOP, LG, ITEMS}));
       flash('已保存');
     }catch(e){}
   }, 400);
@@ -1168,7 +1250,7 @@ function load(){
     const raw=localStorage.getItem(LS_KEY);
     if(!raw) return false;
     const d=JSON.parse(raw);
-    if(!d||d.v!==7) return false;
+    if(!d||d.v!==8) return false;
     if(d.SHOP) Object.assign(SHOP,d.SHOP);
     if(d.LG) Object.assign(LG,d.LG);
     if(d.ITEMS) ITEMS=d.ITEMS;
