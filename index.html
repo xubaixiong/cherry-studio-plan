@@ -351,7 +351,12 @@ let showGrid=true, showDim=true, showAisle=true, showRef=false;
 let panelMode = 'elem';
 let MIRROR_REF = null;   /* mirrorGeom() 的结果，供灯位图层补画参考虚线 */
 const SNAP = 25;
-const LS_KEY = 'cherry-studio-plan-v27';
+let LS_KEY = 'cherry-studio-plan-v28';
+/* ⚠ 存档版本号必须随「默认参数变更」一起升。
+   本次默认值改了：外排灯距 900→800（"按80来"）、内排进深由严格步长改为均分 6 列、
+   镜前灯改贴镜装。旧存档里外排还是 900，load() 会把 900 盖回 LG.spacing，
+   于是面板显示 900、图上按 900 排——表现就是"说了 80 却没改"。
+   升版本号 = 旧存档作废，回到代码里的默认值。 */
 
 /* ══════════════ SVG ══════════════ */
 const svg = document.getElementById('svg');
@@ -812,16 +817,8 @@ function drawLights(){
       const dark = isB ? '#2f7a5e' : '#6a7a2f';
       mk('rect',{x:l.x-58,y:l.y-58,width:116,height:116,rx:16,fill:main,stroke:dark,'stroke-width':8},g);
       mk('rect',{x:l.x-26,y:l.y-26,width:52,height:52,rx:8,fill:'#f4fff9'},g);
-      /* 打光方向：朝站位 */
-      if(l.aim){
-        const dx=l.aim.x-l.x, dy=l.aim.y-l.y, L=Math.hypot(dx,dy)||1;
-        mk('line',{x1:l.x+dx/L*70,y1:l.y+dy/L*70,x2:l.x+dx/L*(L-40),y2:l.y+dy/L*(L-40),
-          stroke:dark,'stroke-width':7,'stroke-dasharray':'20 16','stroke-opacity':.85},g);
-        const ax=l.x+dx/L*(L-40), ay=l.y+dy/L*(L-40);
-        const ang=Math.atan2(dy,dx)*180/Math.PI;
-        mk('path',{d:'M 0 0 l -34 -18 l 0 36 z',fill:dark,
-          transform:`translate(${ax} ${ay}) rotate(${ang})`},g);
-      }
+      /* 打光方向的两条虚线+箭头已取消：它们和美颜灯→站位连线、镜面法线重合，
+         图上叠成一团。「两灯 + 法线」的三角形已经说明灯打向哪里，不再重复。 */
       tx(g,l.x,l.y-84,isB?'美颜':'美衣',{fill:dark,'font-size':46,'text-anchor':'middle','font-weight':700,
         'paint-order':'stroke',stroke:'#fff','stroke-width':10,'stroke-opacity':.95});
       tx(g,l.x,l.y+140,String(i+1),{fill:dark,'font-size':46,'text-anchor':'middle','font-weight':700,
@@ -952,6 +949,37 @@ function drawSpacing(){
     }
   });
 
+  /* ══════════ 内排首末列到两堵墙的距离 ══════════
+     用户原话：「中间两排灯离最深的墙以及离靠玻璃门的墙的距离也要标出来」。
+     为什么要单独标：内排不是从墙角起排的，首列离后墙、末列离门面墙各有一段留白，
+     这两段留白决定「最里面一格」和「进门第一格」亮不亮——留白太大就成了暗区。
+     之前图上只有灯与灯之间的间距，看不到灯离墙多远，施工时无从核对。
+     画法：沿每根内排的同一侧引两条竖直尺寸线，
+       第一条  后墙(y=0)  → 首列灯心
+       第二条  末列灯心   → 玻璃门墙(y=D)
+     位置与「相邻灯距」用同一侧偏移，一排的尺寸线全在同一列上，读起来不乱。 */
+  {
+    const rowsAll=gridRows();
+    /* 内排＝去掉最外侧两排。四排时是第 2、3 排；三排时是中间那一排。 */
+    const innerRows = rowsAll.length>=3 ? rowsAll.slice(1, rowsAll.length-1) : [];
+    const innerCols = gridCols(true).cols;
+    if(innerRows.length && innerCols.length>=2){
+      const firstY=Math.min(...innerCols), lastY=Math.max(...innerCols);
+      const dBack=Math.round(firstY - 0);          /* 首列 → 后墙（最深的墙） */
+      const dFront=Math.round(SHOP.D - lastY);     /* 末列 → 玻璃门墙 */
+      const off=-165;                              /* 与相邻灯距同侧 */
+      innerRows.forEach(x=>{
+        dimLine(x+off, 0,      x+off, firstY, String(dBack), 0);
+        dimLine(x+off, lastY,  x+off, SHOP.D, String(dFront), 0);
+      });
+      /* 数字之外再写一行话，说明这两个数是什么。
+         只标数字容易被当成"灯距"，写上"离墙"才不会被误读。 */
+      tx(gSpacing,-PADX+40, -PADTOP+160,
+        `内排首列距后墙 ${dBack}　·　末列距玻璃门墙 ${dFront}（内排 ${innerCols.length} 列，列距 ${Math.round(innerCols[1]-innerCols[0])}）`,
+        {fill:'#a8741c','font-size':54,'font-weight':600});
+    }
+  }
+
   /* ══════════ 横向排距：中排到左右排的距离 ══════════
      用户原话：「你的灯距要把中间排灯离两边排灯的距离也画上呀」
      纵向灯距（相邻两灯的间距）之前已经画了，但横向排距一直没标，
@@ -1058,19 +1086,10 @@ function drawItems(){
         /* 站位圆圈已在图上取消：两盏镜前灯连成的三角形（两灯 + 法线交点）
            已经把「人站在哪」表达清楚了，再画一个圈反而压住灯和尺寸线。
            站位坐标仍然保留在 mirrorGeom 里，灯是打向它的，只是不再单独画圈。 */
-        /* 站位到镜心的连线＝镜面法线，必须垂直打在镜面上，
-           否则人站的位置是斜的，看镜子里自己是侧脸，照不出效果 */
-        mk('line',{x1:S.x,y1:S.y,x2:mg.cx,y2:mg.cy,stroke:'#5b93b3','stroke-width':6,
-          'stroke-dasharray':'18 14','stroke-opacity':.7},g);
-        /* 站位正对方向：人面朝镜面的朝向箭头（脚尖方向，朝镜子） */
-        const ax=-mg.nx, ay=-mg.ny;                    /* 从站位指向镜子 */
-        const px=S.x+ax*96, py=S.y+ay*96;
-        const qx=S.x+ax*168, qy=S.y+ay*168;
-        mk('line',{x1:px,y1:py,x2:qx,y2:qy,stroke:'#3f7391','stroke-width':9,'stroke-opacity':.9},g);
-        mk('path',{d:'M 0 0 l -26 -16 l 0 32 z',fill:'#3f7391',
-          transform:`translate(${qx} ${qy}) rotate(${Math.atan2(ay,ax)*180/Math.PI})`},g);
-        /* 两灯连线的参考虚线统一在 drawLights() 里画（灯位图层最上），
-           这里不再重复画，否则会出现两条同色线叠在一起。 */
+        /* 站位到镜心的法线虚线 + "脚尖朝向"箭头也已取消：
+           这条 S→镜心 和 drawLights() 里「两灯中点→镜心」的法线是同一条线
+           （站位本来就在镜心法线上），画两遍成一深一浅两条，看着像重影。
+           现在镜前只留：两灯连线 + 两灯中点到镜心的法线 + 直角符号 = 三角形。 */
       }
     }
 
@@ -1535,7 +1554,7 @@ function renderPanel(){
         <div class="frow narrow"><label>外排灯距</label><input type="number" id="l_sp" value="${LG.spacing}" step="25"><span class="unit">mm</span></div>
       </div>
       <div class="g2">
-        <div class="frow narrow"><label>内排灯距</label><input type="number" id="l_spi" value="${LG.spacingInner}" step="50"><span class="unit">mm</span></div>
+        <div class="frow narrow"><label>内排灯距</label><input type="number" id="l_spi" value="${Math.round(gridCols(true).step)}" step="50" title="目标间距：内排按此间距决定列数（向上取整），实际列距 = 可用长度 ÷ 列数"><span class="unit">mm</span></div>
         <div class="frow narrow"><label>首列距后墙</label><input type="number" id="l_rs" value="${LG.rowStart}" step="25"><span class="unit">mm</span></div>
       </div>
       <div class="frow narrow"><label>末列距门面</label><input type="number" id="l_re" value="${LG.rowEnd}" step="25"><span class="unit">mm</span></div>
@@ -1914,7 +1933,7 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     try{
-      localStorage.setItem(LS_KEY, JSON.stringify({v:11, SHOP, LG, ITEMS}));
+      localStorage.setItem(LS_KEY, JSON.stringify({v:12, SHOP, LG, ITEMS}));
       flash('已保存');
     }catch(e){}
   }, 400);
@@ -1924,7 +1943,7 @@ function load(){
     const raw=localStorage.getItem(LS_KEY);
     if(!raw) return false;
     const d=JSON.parse(raw);
-    if(!d||d.v!==11) return false;
+    if(!d||d.v!==12) return false;
     if(d.SHOP) Object.assign(SHOP,d.SHOP);
     if(d.LG){
       Object.assign(LG,d.LG);
