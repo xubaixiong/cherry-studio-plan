@@ -256,8 +256,8 @@ const LIGHT0 = {
   tiltSide: 15,     // 边排俯仰角（唯一可调项，15° 时洗墙同时照到走道）
 
   /* ══ 灯具规格（照度校核的输入，不是可以拍脑袋填的）══ */
-  genWatt: 12, genLumen: 1000,   // 内排筒灯：12W / 1000lm / 50° / 3500K（市面常规规格）
-  railWatt: 15, railLumen: 1100, // 外排象鼻灯：15W / 1100lm / 36° / 3500K
+  genWatt: 12, genLumen: 1000,   // 内排筒灯：12W / 1000lm / 50° / 4500K（市面常规规格）
+  railWatt: 15, railLumen: 1100, // 外排象鼻灯：15W / 1100lm / 36° / 4500K
   cri: 90,          // 显色指数下限
   /* 房间门口这两只：卫生间/试衣间门外的走道灯（x=1850 排最靠后墙两只）。
      实测删掉后卫生间门口 302→54lx（-82%）、后墙一带 550→218lx（-60%），
@@ -274,8 +274,8 @@ const LIGHT0 = {
   /* ══ 镜前专用：美颜灯（打脸）+ 美衣灯（打身）══
      装在镜子与站位之间，两只都装在镜面上方横杆或吊顶前沿，朝站位方向打。
      为什么要两只：人脸和身体需要的色温/显色/光型完全不同——
-       美颜灯：4000K 中性白、Ra≥95、柔光（扩散板），高位 45° 打脸，消眼下阴影；
-       美衣灯：3500K 暖白、Ra≥95、30° 中束，自上而下打全身，突出面料质感。
+       美颜灯：4500K 中性白、Ra≥95、柔光（扩散板），高位 45° 打脸，消眼下阴影；
+       美衣灯：4500K 中性白、Ra≥95、30° 中束，自上而下打全身，突出面料质感。
      显色指数必须 ≥95：普通 90 的灯照衣服，红色会发暗、米色会发灰，
      顾客在镜前看着喜欢的颜色，走到街上就变样，是最容易被投诉的点。 */
   /* 贴镜装后灯到脸的水平距离 = 800 − 100 = 700mm，
@@ -284,11 +284,11 @@ const LIGHT0 = {
      脸面实测 1068lx、身面 752lx，比 300lx 标准高得多，但试衣镜前本来就要亮。 */
   /* 镜前两只按「够用就好、Ra 必须高」选型：镜前是近距离垂直面，
      照度过高反而不舒服，显色才是关键（顾客看衣服真实颜色）。 */
-  beautyWatt: 12, beautyLumen: 1000, beautyBeam: 36, beautyCct: 4000, beautyCri: 95,
-  clothWatt: 15,  clothLumen: 1200, clothBeam: 36, clothCct: 3500, clothCri: 95,
+  beautyWatt: 12, beautyLumen: 1000, beautyBeam: 36, beautyCct: 4500, beautyCri: 95,
+  clothWatt: 15,  clothLumen: 1200, clothBeam: 36, clothCct: 4500, clothCri: 95,
   hole: 75,         // 开孔直径
-  cct: 3500,        // 色温（营业区暖白）
-  roomCct: 4000,    // 房间色温（中性白，看肤色准）
+  cct: 4500,        // 色温（白墙 + 4500K 中性，衣服本色最准、白墙不偏色）
+  roomCct: 4500,    // 房间色温（与营业区一致，试衣间里外不变色）
   show: true,
   showBeam: true,
   showSpacing: true      // 灯距默认显示：施工队按图作业时最常问的就是「隔多少」，不该藏起来
@@ -369,7 +369,7 @@ let showGrid=true, showDim=true, showAisle=true, showRef=false;
 let panelMode = 'elem';
 let MIRROR_REF = null;   /* mirrorGeom() 的结果，供灯位图层补画参考虚线 */
 const SNAP = 25;
-let LS_KEY = 'cherry-studio-plan-v29';
+let LS_KEY = 'cherry-studio-plan-v31';
 /* ⚠ 存档版本号必须随「默认参数变更」一起升。
    本次默认值改了：外排灯距 900→800（"按80来"）、内排进深由严格步长改为均分 6 列、
    镜前灯改贴镜装。旧存档里外排还是 900，load() 会把 900 盖回 LG.spacing，
@@ -761,12 +761,12 @@ function computeLights(){
 
   /* ══════════ 二、独立房间：各自单独布灯 ══════════
      卫生间 1650×1200、试衣间 1650×1100，都是砌体隔断的封闭小间，
-     顶面独立、开关独立。各配 1 只 4000K 筒灯（比主光 3500K 冷一点，
-     小间里看肤色、看衣服本色更准），45° 下打，独立回路控制。
+     顶面独立、开关独立。试衣间 4500K 与营业区同色温（顾客在里面判断颜色，
+      出来不能变），卫生间 4000K 略暖，45° 下打，独立回路控制。
      这两只灯不属于三排网格，不参与"对齐"约束——它们属于房间。 */
   const ROOMS=[
     {it:wc, zone:'卫生间·独立', cct:4000},
-    {it:ft, zone:'试衣间·独立', cct:4000}
+    {it:ft, zone:'试衣间·独立', cct:4500}
   ];
   ROOMS.forEach(r=>{
     if(!r.it) return;
@@ -922,7 +922,7 @@ function drawLights(){
     `内排 ${LG.genWatt}W/${LG.genLumen}lm/${LG.beamGen}° · 外排 ${LG.railWatt}W/${LG.railLumen}lm/${LG.beamRail}° · ${LG.cct}K · Ra≥${LG.cri} · 营业区平均 ${Math.round(lumenMethod().E_shop)}lx（≥300）· 房间 ${LG.roomWatt}W ${LG.roomCct}K`,
     {fill:'#8a9a68','font-size':56,'text-anchor':'middle','font-weight':600});
   tx(gLight,SHOP.W/2,SHOP.D+PADBOT-60,
-    `卫生间 / 试衣间：砌体隔断的独立封闭空间，各配 1 只 4000K 筒灯、独立开关（青色圆点），不并入营业区网格`,
+    `卫生间 / 试衣间：砌体隔断的独立封闭空间，试衣间 4500K（同营业区）/ 卫生间 4000K，各配 1 只、独立开关（青色圆点），不并入营业区网格`,
     {fill:'#2f7378','font-size':56,'text-anchor':'middle','font-weight':600});
 }
 
@@ -1826,7 +1826,7 @@ function renderLightTableBody(){
   <div class="selnote">灯具 ${ls.length} 只 ＝ 营业区 <b>${lsGrid.length}</b> 只（${nR} 排网格）＋ 独立房间 <b>${lsRoom.length}</b> 只 ＋ 镜前 <b>${lsMir.length}</b> 只。
   开孔 ${LG.hole}mm，内排 ${LG.genWatt}W/${LG.beamGen}°、外排 ${LG.railWatt}W/${LG.beamRail}°，Ra≥${LG.cri}。营业区主光 ${LG.cct}K，外边排离墙 ${LG.sideOff}，
   排距 ${pitches.join('/')}（${nR} 排等距），外排 ${n} 列 × ${Math.round(step)}${nR===4?`，内排 ${innerCols.n} 列 × ${Math.round(innerCols.step)}`:''}。
-  <b>卫生间和试衣间是砌体隔断的封闭房间，顶面独立，各自单独布灯 4000K、单独开关</b>，不走营业区网格。</div>`;
+  <b>卫生间和试衣间是砌体隔断的封闭房间，顶面独立，各自单独布灯（试衣间 4500K / 卫生间 4000K）、单独开关</b>，不走营业区网格。</div>`;
 
   /* 排几何一览 */
   h+=`<div class="sec">${nR} 排定位</div><table class="sched">
@@ -1922,8 +1922,7 @@ function renderLightTableBody(){
   });
   h+=`</table>
   <div class="tot">房间是砌体隔断的封闭空间，<b>外部三排的余光被隔墙挡住，照不进去</b>，必须各自装灯；
-  两只房间灯不属于三排网格，也不参与"对齐"约束。${LG.cct}K 主光偏暖，房间用 <b>4000K</b> 更接近自然光，
-  看肤色和衣服本色更准。</div>`;
+  两只房间灯不属于三排网格，也不参与"对齐"约束。<b>试衣间必须 ${LG.cct}K 与营业区同色温</b>——顾客在里面判断颜色，出来见光不能变；卫生间用 4000K 略暖更舒适。</div>`;
 
   const wAll = lsGrid.reduce((s,l)=>s+(l.watt||0),0) + lsRoom.reduce((s,l)=>s+(l.watt||0),0)
              + lsMir.filter(l=>l.zone==='美颜灯').length*LG.beautyWatt
@@ -1992,7 +1991,7 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     try{
-      localStorage.setItem(LS_KEY, JSON.stringify({v:14, SHOP, LG, ITEMS}));
+      localStorage.setItem(LS_KEY, JSON.stringify({v:16, SHOP, LG, ITEMS}));
       flash('已保存');
     }catch(e){}
   }, 400);
