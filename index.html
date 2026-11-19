@@ -199,16 +199,36 @@ const LIGHT0 = {
      代价：营业区 16 → 20 只，LPD 10.0 → 12.6 W/m²（GB50034 商店限值约 11）。
      所以外排保持 900 密排洗衣服，内排放到 1200 只铺通道，把增灯控制在 4 只。 */
   rowCount: 4,      // 排数：4（推荐）/ 3
-  spacingInner: 1050, // 四排时内排列距（排距 1050 后，内排也按 1050 取，光带才连）
+  spacingInner: 1000, // 四排时内排沿进深方向的灯距（60° 光斑 1963，1000 咬得很死）
+  /* 内排首列/末列留白：严格按 1000 步长从后墙推进，只会排出 5 列，
+     后墙空 1200、门口空 1634，两头各一块明显的空档，进门和走到最里面都暗一截。
+     所以内排单独放开「首列/末列」——按可用长度均分成 6 列，列距约 900，
+     首末各约 1200/1180，两头留白对称，光带一直铺到门口。
+     外排不这样做：外排是洗衣服的窄光，900 是光斑咬合下限，不能为均分改小。 */
+  innerAutoFit: true,   // 内排按「首末留白对称」均分（而不是严格步长）
+  /* 镜面净距：任何营业区筒灯都不得进入镜面这条线 700mm 以内。
+     原因不是好看，是光：象鼻灯向墙倾 15° 扫衣服，若太靠镜子，
+     光会直接打在镜面上形成一块高光，人站在镜前看自己时眼被刺到，
+     镜子里还映出一颗亮灯——这是镜面布置最常见的翻车点。
+     700 是灯体 116 的外沿 + 光斑边缘 + 检修手位的最小值。 */
+  mirrorClear: 700,
+  /* 内排深度方向 1000 与外排 800 不同，是有意的：
+     内排管的是中间两条通道，人走动多、需要更均匀的地面照度，
+     1000 的密度叠 60° 宽光，地面几乎没有起伏；
+     外排贴着墙洗衣服，800 已经足够，再密就是浪费灯。 */
   /* 外排灯心离墙 800：这是服装店铺灯的主流做法。
      离墙太近（650）时，36° 灯斜打墙面，光还没铺开就打到墙上，墙面一圈过亮、
      墙脚一圈发暗，衣服挂上去下半截是灰的；离墙 800 时光锥有 550 半径的余量，
      打到墙面时已经展开，挂衣带上下受光均匀。
      改成 800 后，四排等距 → 排距 = (4750 − 2×800)/3 = 1050。 */
   sideOff: 800,     // 最外排灯心离墙距离（左右同值 ⇒ 四排严格等距 1050）
-  spacing: 900,     // 外排沿长度方向的灯距（36° 光斑 1105，咬住 900，光带不断）
+  spacing: 800,     // 外排（象鼻灯）沿进深方向的灯距
+  /* 800 而不是 900：4 号象鼻灯在原 900 排布下压得太靠近全身镜，
+     照到镜面上会出现一块直射高光，站在镜前照镜子时反而刺眼。
+     收到 800 后末列整体后移，离镜子让出空间；36° 光斑 1105 > 800，
+     重叠 305mm，光带依旧连续，不用担心出现暗缝。 */
   rowStart: 700,    // 第一列距后墙（后墙一带也有光，不留黑角）
-  rowEnd: 734,      // 最后一列距临街门面（6834-734-700=5400 = 6×900）
+  rowEnd: 734,      // 最后一列距临街门面（灯距一变，列数自动重算，不写死）
   aimH: 1300,       // 打光目标高度（衣服中部）
   tiltMax: 75,      // 象鼻灯最大俯仰（0–75° 可调）
   /* ── 光束角与倾角：靠这三个数把走道接上，不动排距 ──
@@ -221,7 +241,7 @@ const LIGHT0 = {
      同一颗 COB 换不同反光杯 ⇒ 不同光束角。所以「18W 36°」是一个整体型号，
      采购时必须一次性报死。象鼻灯只有【俯仰 0–75°】和【水平 360°】可调，
      光束角不可调 —— 把这里改成下拉选型号，而不是让人随便填数字。 */
-  beamRail: 36,     // 边排型号：18W/36°/1500lm —— 洗衣服，光斑1105咬住灯距900
+  beamRail: 36,     // 边排型号：18W/36°/1500lm —— 洗衣服，光斑 1105 咬住灯距 800
   beamSpot: 24,     // 重点型号：18W/24°/1500lm —— 橱窗模特/首饰柜，更聚光
   beamGen: 60,      // 中排型号：18W/60°/1500lm —— 铺通道，光斑1963罩住排距1725
   tiltSide: 15,     // 边排俯仰角（唯一可调项，15° 时洗墙同时照到走道）
@@ -253,7 +273,7 @@ const LIGHT0 = {
   roomCct: 4000,    // 房间色温（中性白，看肤色准）
   show: true,
   showBeam: true,
-  showSpacing: false
+  showSpacing: true      // 灯距默认显示：施工队按图作业时最常问的就是「隔多少」，不该藏起来
 };
  
  /* ══════════════ 元素 ══════════════
@@ -433,9 +453,10 @@ function drawAisle(){
   gAisle.style.display = showAisle?'':'none';
   if(!showAisle) return;
 
+  /* 玻璃门是往外开的（临街外开，DOOR_ANG 画在门面外侧），
+     室内这一侧不需要留出任何门扇回转空间——地上的通道框已经删掉，
+     否则会白占 900×1500 一块好用面积，还误导施工以為门要往里开。 */
   const doorW = SHOP.DX2-SHOP.DX1;
-  mk('rect',{x:SHOP.DX1,y:SHOP.D-1500,width:doorW,height:1500,fill:'rgba(122,178,122,.14)',stroke:'#7ab27a','stroke-width':9,'stroke-dasharray':'40 26'},gAisle);
-  tx(gAisle,(SHOP.DX1+SHOP.DX2)/2,SHOP.D-1560,'进门通道 必须清空',{fill:'#4a7a4a','font-size':60,'text-anchor':'middle','font-weight':700});
 
   const sofa=ITEMS.find(i=>i.id==='sofa'), jew=ITEMS.find(i=>i.id==='jew');
   const hL=ITEMS.find(i=>i.id==='hL1'), hR=ITEMS.find(i=>i.id==='hR1');
@@ -552,16 +573,51 @@ function gridRows(){
   }
   return [LG.sideOff, W/2, W-LG.sideOff];
 }
-/* 外排（洗墙/洗衣服）用 900 密排，光斑 1105 咬合；
+/* 外排（洗墙/洗衣服）按 800 密排，光斑 1105 咬合（重叠 305）；
    内排（铺通道）用 1200，60° 光斑 1963 足够覆盖，少排一只省电。 */
+/* 列位：严格按灯距逐列推进，不再把剩余量摊平。
+   为什么不再均分：原来 n=round(span/want)、step=span/n，
+   填 800 会被摊成 771，填 900 摊成 900，看着差不多，但只要 n 一进位，
+   末列就整体往门口挪。外排灯距从 900 改 800 时 n 从 6 变 7，
+   末列反而从 5650 挪到 5714，更贴全身镜——越调越糟就是这么来的。
+   现在的规则：第一列在 rowStart + 灯距/2，之后每列 + 灯距，
+   末列必须仍在 D − rowEnd 以内，装不下就不排（宁可门口留空）。
+   这样「灯距 800」就是你真正得到的 800，不会被四舍五入改掉。 */
 function gridCols(inner){
-  const span = SHOP.D - LG.rowEnd - LG.rowStart;
   const want = (LG.rowCount===4 && inner) ? LG.spacingInner : LG.spacing;
-  const n = Math.max(2, Math.round(span/want));
-  const step = span/n;
+  const limit = SHOP.D - LG.rowEnd;              /* 末列不得越过的线 */
   const cols=[];
-  for(let i=0;i<n;i++) cols.push(LG.rowStart + step*(i+0.5));
-  return {cols, step, n};
+
+  /* 内排：按「首末留白对称」均分。
+     均分的意义不在好看，在两头的照度：
+     严格步长会剩下一个不足一格的尾巴（1000 步长剩 1634），
+     那块地方只剩相邻灯的余光，进门第一米和最里面一米都是暗的。
+     均分后列距约 900，6 列把光带从后墙一路铺到门口。 */
+  if(LG.rowCount===4 && inner && LG.innerAutoFit){
+    const span = limit - LG.rowStart;
+    /* 向上取整：span/want = 5400/1000 = 5.4，
+       round 会给 5（列距 1080、末列离门 1634），ceil 才给 6（列距 900、末列离门 1184）。
+       这里要的是"把灯铺满、两头留白对称"，所以宁可多一只也不要剩个空档。
+       减 0.05 是为了避免 span 刚好整除时多算一列（5.00 → 5，不是 6）。 */
+    const nFit = Math.max(2, Math.ceil(span / want - 0.05));
+    const stepFit = span / nFit;
+    for(let i=0;i<nFit;i++) cols.push(LG.rowStart + stepFit*(i+0.5));
+    return {cols, step:stepFit, n:nFit, want};
+  }
+
+  let y = LG.rowStart + want/2;
+  while(y <= limit + 0.001){
+    cols.push(y);
+    y += want;
+  }
+  if(cols.length<2){                             /* 兜底：极端参数下至少两只 */
+    cols.length=0;
+    const mid=LG.rowStart+want/2;
+    cols.push(mid, mid+want);
+  }
+  const n=cols.length;
+  const step = n>1 ? cols[1]-cols[0] : want;
+  return {cols, step, n, want};
 }
 function inRect(x,y,it){ return it && x>=it.x && x<=it.x+it.w && y>=it.y && y<=it.y+it.d; }
 
@@ -591,7 +647,17 @@ function mirrorGeom(){
         {x:bx-ux*side, y:by-uy*side},
         {x:bx+ux*side, y:by+uy*side}
       ];
-    }
+    },
+    /* 任意一点到「镜面这条线」的垂直距离（沿法线量，不是到镜心的距离）。
+       用来剔除贴镜的营业区灯：贴镜的灯会在镜面上打出高光。 */
+    distToMirror(px,py){
+      return (px-cx)*nx + (py-cy)*ny;
+    },
+    /* 点是否投影在镜身长度范围内（超出两端算镜外，不算贴镜） */
+    alongMirror(px,py){
+      return (px-cx)*ux + (py-cy)*uy;
+    },
+    halfLen: m.w/2
   };
 }
 
@@ -604,6 +670,7 @@ function computeLights(){
   const colsInner=gridCols(true).cols;          /* 内排：1200（四排时生效） */
   const cols=colsOuter;                          /* 三排仍用这一组 */
   const wc=ITEMS.find(i=>i.id==='wc'), ft=ITEMS.find(i=>i.id==='fit');
+  const mgC=mirrorGeom();       /* 镜面净距判定用，循环外算一次 */
 
   const add=(x,y,beam,zone,extra)=>{
     const r = beam===LG.beamRail?rRail : beam===LG.beamSpot?rSpot : rGen;
@@ -625,6 +692,12 @@ function computeLights(){
     const myCols = (LG.rowCount===4 && !isOuter(ri)) ? colsInner : colsOuter;
     myCols.forEach(y=>{
       if(inRect(x,y,wc) || inRect(x,y,ft)) return;   /* ← 房间顶上不布营业区的灯 */
+      /* ← 太贴近镜面的格点也不要：会打到镜面造成眩光。
+         只对「投影落在镜身长度内」的点生效——镜子两端的斜前方不算贴镜，
+         否则会把镜子侧面的正常灯位一起误删。 */
+      if(mgC && Math.abs(mgC.alongMirror(x,y))<=mgC.halfLen){
+        if(mgC.distToMirror(x,y) < LG.mirrorClear) return;
+      }
 
       const wallX = isOuter(ri) ? (ri===0 ? 0 : W) : undefined;
 
@@ -982,9 +1055,9 @@ function drawItems(){
       const mg = (it.id==='mirror') ? mirrorGeom() : null;
       if(mg){
         const S=mg.stand;
-        mk('circle',{cx:S.x,cy:S.y,r:96,fill:'rgba(111,168,200,.16)',
-          stroke:'#5b93b3','stroke-width':7,'stroke-dasharray':'24 16'},g);
-        tx(g,S.x,S.y+22,'站位',{fill:'#3f7391','font-size':52,'text-anchor':'middle','font-weight':700});
+        /* 站位圆圈已在图上取消：两盏镜前灯连成的三角形（两灯 + 法线交点）
+           已经把「人站在哪」表达清楚了，再画一个圈反而压住灯和尺寸线。
+           站位坐标仍然保留在 mirrorGeom 里，灯是打向它的，只是不再单独画圈。 */
         /* 站位到镜心的连线＝镜面法线，必须垂直打在镜面上，
            否则人站的位置是斜的，看镜子里自己是侧脸，照不出效果 */
         mk('line',{x1:S.x,y1:S.y,x2:mg.cx,y2:mg.cy,stroke:'#5b93b3','stroke-width':6,
@@ -998,11 +1071,6 @@ function drawItems(){
           transform:`translate(${qx} ${qy}) rotate(${Math.atan2(ay,ax)*180/Math.PI})`},g);
         /* 两灯连线的参考虚线统一在 drawLights() 里画（灯位图层最上），
            这里不再重复画，否则会出现两条同色线叠在一起。 */
-        /* 站位离镜距离 */
-        tx(g,(S.x+mg.cx)/2+mg.ux*150,(S.y+mg.cy)/2+mg.uy*150,
-          '站位离镜 '+Math.round(mg.dist),
-          {fill:'#3f7391','font-size':44,'text-anchor':'middle','font-weight':600,
-           'paint-order':'stroke',stroke:'#fff','stroke-width':10,'stroke-opacity':.92});
       }
     }
 
@@ -1185,31 +1253,10 @@ function validateBody(w){
   else ok.push('门口通道畅通');
 
   const ls=computeLights();
-  /* 两灯平行参考虚线：画在灯体之后，保证不被方形灯压住。
-     这条线就是「两灯连线」本身，方向和镜身切向完全一致，
-     图上看到它平行于镜子上边沿，就等于看到了平行关系的证据。 */
-  /* 这里必须自己算一遍几何，不能依赖 drawItems 先跑：
-     redraw() 里灯位图层可能先于元素图层绘制，那时 MIRROR_REF 还是 null，
-     参考线就画不出来（曾因此出现「代码写了但图上没有」）。 */
-  const MG = mirrorGeom();
-  if(MG){
-    const [L1,L2]=MG.lights(700,250);
-    mk('line',{x1:L1.x,y1:L1.y,x2:L2.x,y2:L2.y,stroke:'#2f7a5e','stroke-width':7,
-      'stroke-dasharray':'20 14','stroke-opacity':.95},gLight);
-    /* 法线：从两灯中点垂直打到镜心，再延伸到站位 */
-    const mx=(L1.x+L2.x)/2, my=(L1.y+L2.y)/2;
-    const S=MG.stand;
-    mk('line',{x1:S.x,y1:S.y,x2:MG.cx,y2:MG.cy,stroke:'#2f7a5e',
-      'stroke-width':6,'stroke-dasharray':'20 14','stroke-opacity':.8},gLight);
-    /* 直角符号：在两灯连线与法线交点处画一个小方框，直观表示垂直 */
-    const sg = ((S.x-mx)>=0?1:-1);
-    const px=MG.nx*sg, py=MG.ny*sg;
-    const q=46;
-    mk('path',{d:`M ${mx+MG.ux*q} ${my+MG.uy*q}
-                  L ${mx+MG.ux*q+px*q} ${my+MG.uy*q+py*q}
-                  L ${mx+px*q} ${my+py*q}`,
-      fill:'none',stroke:'#2f7a5e','stroke-width':5,'stroke-opacity':.9},gLight);
-  }
+  /* ⚠ 这段参考虚线只能在 drawLights() 里画一次。
+     之前这里（validate 内）也有一份完全相同的副本，导致每跑一次校验
+     就多画一遍，DOM 里出现两组坐标重合的线——看上去是重影/发毛。
+     教训：绘制代码不要跨函数复制，要么抽成函数调用一处。 */
 
   const nMir=ls.filter(l=>l.mirrorLight).length;
   const nRoom=ls.filter(l=>l.room).length;
@@ -1261,9 +1308,17 @@ function validateBody(w){
   /* ② 三排必须共用同一组列坐标。
      ⚠ 卫生间/试衣间顶面属于房间自己，营业区左排在那里本就不该有灯，
         所以比对时要把"落在房间内的格点"排除掉，否则会误报未对齐。 */
+  /* 不该有营业区灯的位置有两种，都要排除，否则会被当成"漏灯"误报：
+     ① 卫生间/试衣间顶面（房间自己的吊顶）；
+     ② 贴镜净距内的格点（会打到镜面出眩光，主动剔除的）。 */
+  const mgJ=mirrorGeom();
   const banned=(x,y)=>{
     const a=ITEMS.find(i=>i.id==='wc'), b=ITEMS.find(i=>i.id==='fit');
-    return inRect(x,y,a) || inRect(x,y,b);
+    if(inRect(x,y,a) || inRect(x,y,b)) return true;
+    if(mgJ && Math.abs(mgJ.alongMirror(x,y))<=mgJ.halfLen){
+      if(mgJ.distToMirror(x,y) < LG.mirrorClear) return true;
+    }
+    return false;
   };
   /* 每一排按它自己那一组列坐标去比：外排用 900 组、内排用 1200 组。
      四排时内外列组不同，如果统一拿外排的列去比内排，会得到满屏"未对齐"的假告警。 */
@@ -1279,7 +1334,7 @@ function validateBody(w){
     });
   });
   if(misalign) msgs.push(`有 ${misalign} 处该有灯却没有，未对齐`);
-  else ok.push(`${rows.length}排×${n}列对齐`);
+  else ok.push(`${rows.length} 排按列组对齐（外 ${outerCols.n} 列 / 内 ${innerCols.n} 列）`);
 
   // ③ 灯距必须均匀（均分后理论上全等，容差 2mm）
   const gaps=[]; for(let i=1;i<cols.length;i++) gaps.push(cols[i]-cols[i-1]);
