@@ -369,7 +369,7 @@ let showGrid=true, showDim=true, showAisle=true, showRef=false;
 let panelMode = 'elem';
 let MIRROR_REF = null;   /* mirrorGeom() 的结果，供灯位图层补画参考虚线 */
 const SNAP = 25;
-let LS_KEY = 'cherry-studio-plan-v28';
+let LS_KEY = 'cherry-studio-plan-v29';
 /* ⚠ 存档版本号必须随「默认参数变更」一起升。
    本次默认值改了：外排灯距 900→800（"按80来"）、内排进深由严格步长改为均分 6 列、
    镜前灯改贴镜装。旧存档里外排还是 900，load() 会把 900 盖回 LG.spacing，
@@ -1992,7 +1992,7 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     try{
-      localStorage.setItem(LS_KEY, JSON.stringify({v:13, SHOP, LG, ITEMS}));
+      localStorage.setItem(LS_KEY, JSON.stringify({v:14, SHOP, LG, ITEMS}));
       flash('已保存');
     }catch(e){}
   }, 400);
