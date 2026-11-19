@@ -241,16 +241,32 @@ const LIGHT0 = {
      同一颗 COB 换不同反光杯 ⇒ 不同光束角。所以「18W 36°」是一个整体型号，
      采购时必须一次性报死。象鼻灯只有【俯仰 0–75°】和【水平 360°】可调，
      光束角不可调 —— 把这里改成下拉选型号，而不是让人随便填数字。 */
-  beamRail: 36,     // 边排型号：18W/36°/1500lm —— 洗衣服，光斑 1105 咬住灯距 800
-  beamSpot: 24,     // 重点型号：18W/24°/1500lm —— 橱窗模特/首饰柜，更聚光
-  beamGen: 60,      // 中排型号：18W/60°/1500lm —— 铺通道，光斑1963罩住排距1725
+  /* ══ 两排灯是两种不同用途的灯具，功率/光通量必须分开存 ══
+     以前内排外排共用 watt/lumen，一改就两边一起变，没法分别选型。
+     现在拆成 gen*（内排·铺通道）和 rail*（外排·洗衣服）两套。 */
+  beamRail: 36,     // 边排型号：15W/36°/1100lm —— 洗衣服，光斑 1105 咬住灯距 800
+  beamSpot: 24,     // 重点型号：18W/24°/1550lm —— 橱窗模特/首饰柜，更聚光
+  /* 内排 50° 而不是 60°，这是按本店落差算出来的，不是拍脑袋：
+     吊顶 3000 − 衣面 1300 = 落差 1700；50° 光斑 2×1700×tan25° = 1585mm，
+     对 900 列距是 1.76 倍重叠 → 地面灯下与灯间实测只差 0.5~1.1%，不会出亮条。
+     换成 60° 光斑 1963（2.18 倍）过密，且眩光半径从 676 涨到 837，
+     走道宽 1900、客人站中线距灯 950，60° 只剩 113mm 余量，一偏头就晃眼。
+     换成 36° 光斑 1105（1.23 倍）太窄，排距 1050 处接不上，会露空。 */
+  beamGen: 50,      // 中排型号：12W/50°/1000lm —— 铺通道，光斑1585咬住列距900
   tiltSide: 15,     // 边排俯仰角（唯一可调项，15° 时洗墙同时照到走道）
 
   /* ══ 灯具规格（照度校核的输入，不是可以拍脑袋填的）══ */
-  lumen: 1500,      // 单灯光通量 lm（18W COB，光效 83 lm/W）
-  watt: 18,         // 单灯功率 W
+  genWatt: 12, genLumen: 1000,   // 内排筒灯：12W / 1000lm / 50° / 3500K（市面常规规格）
+  railWatt: 15, railLumen: 1100, // 外排象鼻灯：15W / 1100lm / 36° / 3500K
   cri: 90,          // 显色指数下限
-  /* 房间灯单独一款：18W/60°/1500lm，4000K */
+  /* 房间门口这两只：卫生间/试衣间门外的走道灯（x=1850 排最靠后墙两只）。
+     实测删掉后卫生间门口 302→54lx（-82%）、后墙一带 550→218lx（-60%），
+     所以默认保留。留一个开关，方便现场对比「省两只灯」的代价。 */
+  dropRoomDoor: false,
+  /* 房间灯单独一款：18W/60°/1500lm，4000K。
+     小房间不能因为面积小就配小灯：卫生间只有 1.98m²、室形指数 K=0.42、
+     利用系数仅 0.50，12W/1100lm 实测只有 222lx（＜300 不达标），
+     必须 1500lm 才够 300lx。封闭小间四周全反射，光出不去但总量要够。 */
   roomWatt: 18,
   roomLumen: 1500,
   roomBeam: 60,
@@ -266,8 +282,10 @@ const LIGHT0 = {
      36° 束在 700mm 处光斑约 2×700×tan18° = 455mm，正好罩住一张脸，
      不用死抠 24°（太聚，边缘发暗、眼窝会出硬阴影）。
      脸面实测 1068lx、身面 752lx，比 300lx 标准高得多，但试衣镜前本来就要亮。 */
-  beautyWatt: 15, beautyLumen: 1300, beautyBeam: 36, beautyCct: 4000, beautyCri: 95,
-  clothWatt: 18,  clothLumen: 1500, clothBeam: 36, clothCct: 3500, clothCri: 95,
+  /* 镜前两只按「够用就好、Ra 必须高」选型：镜前是近距离垂直面，
+     照度过高反而不舒服，显色才是关键（顾客看衣服真实颜色）。 */
+  beautyWatt: 12, beautyLumen: 1000, beautyBeam: 36, beautyCct: 4000, beautyCri: 95,
+  clothWatt: 15,  clothLumen: 1200, clothBeam: 36, clothCct: 3500, clothCri: 95,
   hole: 75,         // 开孔直径
   cct: 3500,        // 色温（营业区暖白）
   roomCct: 4000,    // 房间色温（中性白，看肤色准）
@@ -488,24 +506,33 @@ function beamRadius(beam){
    光效按 83 lm/W（18W COB 常规档）。同一瓦数换反光杯 ⇒ 光通量略有差异，
    但光束角越小，中心光强越高、边缘越暗，这是几何决定的。 */
 const FIXTURES = [
-  {w:12, b:24, lm:1000}, {w:12, b:36, lm:950},
-  {w:15, b:24, lm:1250}, {w:15, b:36, lm:1200}, {w:15, b:60, lm:1150},
-  {w:18, b:24, lm:1550}, {w:18, b:36, lm:1500}, {w:18, b:45, lm:1450}, {w:18, b:60, lm:1400},
-  {w:24, b:36, lm:2000}, {w:24, b:45, lm:1950}, {w:24, b:60, lm:1900},
+  /* b=光束角(半光强角)，w=功率，lm=光通量。市面常规 COB 筒灯/象鼻灯规格。
+     50° 这一档是给营业区内排（基础面光）用的：
+     光斑 2×1700×tan25° = 1585mm，对 900 列距是 1.76 倍重叠，地面平滑无亮条；
+     而 60° 光斑 1963mm 是 2.18 倍，过密且眩光半径涨到 837mm，客人在走道偏头就见光源。 */
+  {w:7,  b:50, lm:600},  {w:9,  b:50, lm:800},
+  {w:12, b:24, lm:1000}, {w:12, b:36, lm:950}, {w:12, b:50, lm:1000}, {w:12, b:60, lm:1100},
+  {w:15, b:24, lm:1200}, {w:15, b:36, lm:1100}, {w:15, b:50, lm:1200}, {w:15, b:60, lm:1150},
+  {w:18, b:24, lm:1550}, {w:18, b:36, lm:1500}, {w:18, b:45, lm:1450}, {w:18, b:50, lm:1600}, {w:18, b:60, lm:1400},
+  {w:24, b:36, lm:2000}, {w:24, b:45, lm:1950}, {w:24, b:50, lm:2100}, {w:24, b:60, lm:1900},
 ];
-function fixtureOf(beam){
-  /* 选中光束角后，返回最接近的型号（同光束角优先取 18W 档） */
+function fixtureOf(beam, role){
+  /* 选中光束角后，返回该用途对应的型号。
+     role='gen'（内排铺通道）优先取 9W 档；role='rail'（外排洗衣服）优先取 15W 档。
+     不指定 role 时退回 18W 档（历史行为，供重点照明等处沿用）。 */
+  const prefW = role==='gen' ? 12 : (role==='rail' ? 15 : 18);
   const exact=FIXTURES.filter(f=>f.b===beam);
   if(exact.length){
-    const pref=exact.find(f=>f.w===18) || exact[0];
+    const pref=exact.find(f=>f.w===prefW) || exact.reduce((a,f)=>
+      Math.abs(f.w-prefW)<Math.abs(a.w-prefW)?f:a);
     return pref;
   }
   return FIXTURES.reduce((a,f)=>Math.abs(f.b-beam)<Math.abs(a.b-beam)?f:a);
 }
-function beamOptions(cur){
+function beamOptions(cur, role){
   const beams=[...new Set(FIXTURES.map(f=>f.b))].sort((a,b)=>a-b);
   return beams.map(b=>{
-    const f=fixtureOf(b);
+    const f=fixtureOf(b, role);
     return `<option value="${b}" ${b===cur?'selected':''}>${b}° · ${f.w}W · ${f.lm}lm</option>`;
   }).join('');
 }
@@ -523,7 +550,7 @@ function lumenMethod(){
   const lights = computeLights();
   /* 只算营业区的一般照明：镜前美颜/美衣灯是垂直面重点照明，不属于地面照度 */
   const shopL = lights.filter(l=>!l.room && !l.mirrorLight);
-  const totalLm = shopL.reduce((s,l)=>s+(l.lm||LG.lumen), 0);
+  const totalLm = shopL.reduce((s,l)=>s+(l.lm||LG.genLumen), 0);
   const E_shop = totalLm*0.65*MF/Math.max(A_shop,1);
   const rooms = [{name:'卫生间',it:wc},{name:'试衣间',it:ft}].filter(d=>d.it).map(def=>{
     const A=(def.it.w*def.it.d)/1e6;
@@ -546,7 +573,7 @@ function lumenMethod(){
     const mg0 = mirrorGeom();
     const horiz = mg0 ? Math.max(0.1, (mg0.dist - 100)/1000) : 0.70;
     const dist = Math.hypot(dz, horiz);            /* 斜距 */
-    const lm = l.lm || LG.lumen;
+    const lm = l.lm || LG.genLumen;
     const omega = 2*Math.PI*(1-Math.cos(l.beam/2*Math.PI/180));   /* 立体角 sr */
     const I0 = lm/omega;                           /* 中心光强 cd */
     const E = I0*MF/(dist*dist);                   /* 中心照度 lx */
@@ -679,8 +706,15 @@ function computeLights(){
 
   const add=(x,y,beam,zone,extra)=>{
     const r = beam===LG.beamRail?rRail : beam===LG.beamSpot?rSpot : rGen;
-    const lm = (extra&&extra.room) ? LG.roomLumen : LG.lumen;
-    L.push(Object.assign({x,y,beam,r,zone,lm},extra||{}));
+    /* 光通量按灯型取：房间灯 > 外排象鼻 > 内排筒灯。
+       内排和外排是两个不同型号（9W/50° 与 15W/36°），不能共用一个 lm。 */
+    const lm = (extra&&extra.room) ? LG.roomLumen
+             : (beam===LG.beamRail   ? LG.railLumen
+             : (beam===LG.beamSpot   ? LG.railLumen : LG.genLumen));
+    const watt = (extra&&extra.room) ? LG.roomWatt
+             : (beam===LG.beamRail   ? LG.railWatt
+             : (beam===LG.beamSpot   ? LG.railWatt : LG.genWatt));
+    L.push(Object.assign({x,y,beam,r,zone,lm,watt},extra||{}));
   };
 
   /* ══════════ 一、营业区：三排对齐网格 ══════════
@@ -703,6 +737,10 @@ function computeLights(){
       if(mgC && Math.abs(mgC.alongMirror(x,y))<=mgC.halfLen){
         if(mgC.distToMirror(x,y) < LG.mirrorClear) return;
       }
+      /* 可选的「省掉房间门口两只」：只对 x=1850 排最靠后墙的两只生效。
+         实测代价：卫生间门口 302→54lx、后墙一带 550→218lx，不建议删，
+         但保留开关让人自己看数据。 */
+      if(LG.dropRoomDoor && Math.abs(x-1850)<1 && (Math.round(y)===1150||Math.round(y)===2050)) return;
 
       const wallX = isOuter(ri) ? (ri===0 ? 0 : W) : undefined;
 
@@ -861,9 +899,9 @@ function drawLights(){
   const nMir=ls.filter(l=>l.mirrorLight).length;
   const nRoom=ls.filter(l=>l.room).length;
   const nShop=ls.length-nRoom-nMir;
-  const wTotal = nShop*LG.watt + nRoom*LG.roomWatt
-               + ls.filter(l=>l.zone==='美颜灯').length*LG.beautyWatt
-               + ls.filter(l=>l.zone==='美衣灯').length*LG.clothWatt;
+  /* 总功率按每只灯自己的 watt 字段累加：内排 9W、外排 15W、房间 12W 各不同，
+     不能再拿单一 LG.watt 乘以总数。 */
+  const wTotal = ls.reduce((s,l)=>s+(l.watt||0), 0);
   /* 按实际排数报数：3 排时是"左/中/右"，4 排时是"左/内/内/右"，
      不能写死"三排"，否则改了 rowCount 图上的字就跟灯对不上。 */
   const rowX=gridRows(), nR=rowX.length;
@@ -881,7 +919,7 @@ function drawLights(){
     + ` · 外排光束${LG.beamRail}° 向墙倾${tiltSide().toFixed(0)}° · ${nR===4?'内排':'中排'}光束${LG.beamGen}° 垂直`,
     {fill:'#a89a68','font-size':56,'text-anchor':'middle'});
   tx(gLight,SHOP.W/2,SHOP.D+PADBOT-150,
-    `${LG.watt}W · ${LG.lumen}lm · ${LG.cct}K · Ra≥${LG.cri} · 营业区平均 ${Math.round(lumenMethod().E_shop)}lx（≥300）· 房间 ${LG.roomWatt}W ${LG.roomCct}K`,
+    `内排 ${LG.genWatt}W/${LG.genLumen}lm/${LG.beamGen}° · 外排 ${LG.railWatt}W/${LG.railLumen}lm/${LG.beamRail}° · ${LG.cct}K · Ra≥${LG.cri} · 营业区平均 ${Math.round(lumenMethod().E_shop)}lx（≥300）· 房间 ${LG.roomWatt}W ${LG.roomCct}K`,
     {fill:'#8a9a68','font-size':56,'text-anchor':'middle','font-weight':600});
   tx(gLight,SHOP.W/2,SHOP.D+PADBOT-60,
     `卫生间 / 试衣间：砌体隔断的独立封闭空间，各配 1 只 4000K 筒灯、独立开关（青色圆点），不并入营业区网格`,
@@ -1280,9 +1318,9 @@ function validateBody(w){
   const nMir=ls.filter(l=>l.mirrorLight).length;
   const nRoom=ls.filter(l=>l.room).length;
   const nShop=ls.length-nRoom-nMir;
-  const wTotal = nShop*LG.watt + nRoom*LG.roomWatt
-               + ls.filter(l=>l.zone==='美颜灯').length*LG.beautyWatt
-               + ls.filter(l=>l.zone==='美衣灯').length*LG.clothWatt;
+  /* 总功率按每只灯自己的 watt 字段累加：内排 9W、外排 15W、房间 12W 各不同，
+     不能再拿单一 LG.watt 乘以总数。 */
+  const wTotal = ls.reduce((s,l)=>s+(l.watt||0), 0);
   ok.push(`灯具 ${ls.length} 只 / ${wTotal}W（营业区 ${nShop} + 房间 ${nRoom} + 镜前 ${nMir}）`);
 
   // 灯距过近检查（镜前美颜/美衣两只是组合灯，本来就该并排 380，不参与）
@@ -1337,6 +1375,10 @@ function validateBody(w){
     if(mgJ && Math.abs(mgJ.alongMirror(x,y))<=mgJ.halfLen){
       if(mgJ.distToMirror(x,y) < LG.mirrorClear) return true;
     }
+    /* ③ 主动勾掉「省掉房间门口两只」时，这两处也不该有灯，
+       否则会被当成漏灯误报。 */
+    if(LG.dropRoomDoor && Math.abs(x-1850)<1 &&
+       (Math.round(y)===1150||Math.round(y)===2050)) return true;
     return false;
   };
   /* 每一排按它自己那一组列坐标去比：外排用 900 组、内排用 1200 组。
@@ -1567,30 +1609,39 @@ function renderPanel(){
         排距由开间自动平分，改「外边排离墙」或「排数」其余自动跟随，永远等距对齐。<br>
         <b>为什么默认 4 排：</b>3 排时排距 ${Math.round((SHOP.W-2*LG.sideOff)/2)}，而外排 ${LG.beamRail}° 光斑在衣服面只有 ${Math.round(2*beamRadius(LG.beamRail))} 宽，
         两排之间实测留下 <b>667mm</b> 的暗带（谷值仅峰值的 39%）；改 4 排后暗带收到 <b>108mm</b>，
-        代价是营业区 16→20 只。内排用 60° 光斑 1963，列距可放到 1200 仍咬得住。
+        代价是营业区 16→20 只。内排用 ${LG.beamGen}° 光斑 ${Math.round(2*beamRadius(LG.beamGen))}，列距 ${Math.round(gridCols(true).step)} 仍咬得住。
       </div>
       <div class="frow narrow"><label>目标高（衣服中部）</label><input type="number" id="l_ah" value="${LG.aimH}" step="50"><span class="unit">mm</span></div>
       <div class="sec">灯具选型（光束角是型号属性，出厂固定）</div>
       <div class="hint" style="margin:0 0 8px">
         光束角<b>不能事后调</b>，买灯时就定死了。同一颗 COB 换不同反光杯得到不同光束角，
-        「18W/36°」是一个整体型号。象鼻灯唯一可调的是<b>俯仰 0–75°</b>和水平 360°。
+        「${LG.railWatt}W/${LG.beamRail}°」这样的组合是一个整体型号。象鼻灯唯一可调的是<b>俯仰 0–75°</b>和水平 360°。
       </div>
-      <div class="frow"><label>边排（洗衣服）</label>
+      <div class="frow"><label>边排（洗衣服·象鼻）</label>
         <select id="l_bra">
-          ${beamOptions(LG.beamRail)}
+          ${beamOptions(LG.beamRail,'rail')}
         </select></div>
-      <div class="frow"><label>中排（铺通道）</label>
+      <div class="g2">
+        <div class="frow narrow"><label>边排功率</label><input type="number" id="l_lwr" value="${LG.railWatt}" step="1"><span class="unit">W</span></div>
+        <div class="frow narrow"><label>边排光通量</label><input type="number" id="l_lm2" value="${LG.railLumen}" step="50"><span class="unit">lm</span></div>
+      </div>
+      <div class="frow"><label>中排（铺通道·筒灯）</label>
         <select id="l_bgn">
-          ${beamOptions(LG.beamGen)}
+          ${beamOptions(LG.beamGen,'gen')}
         </select></div>
+      <div class="g2">
+        <div class="frow narrow"><label>中排功率</label><input type="number" id="l_lmw" value="${LG.genWatt}" step="1"><span class="unit">W</span></div>
+        <div class="frow narrow"><label>中排光通量</label><input type="number" id="l_lm" value="${LG.genLumen}" step="50"><span class="unit">lm</span></div>
+      </div>
       <div class="frow"><label>重点（模特·首饰）</label>
         <select id="l_bsp">
           ${beamOptions(LG.beamSpot)}
         </select></div>
-      <div class="g2">
-        <div class="frow narrow"><label>功率</label><input type="number" id="l_w" value="${LG.watt}" step="1"><span class="unit">W</span></div>
-        <div class="frow narrow"><label>光通量</label><input type="number" id="l_lm" value="${LG.lumen}" step="50"><span class="unit">lm</span></div>
-      </div>
+      <div class="frow"><label>省掉房间门口两只</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+          <input type="checkbox" id="l_drd" ${LG.dropRoomDoor?'checked':''}>
+          <span style="color:#8a6a22">实测门口会从 302lx 掉到 54lx</span>
+        </label></div>
       <div class="hint" style="margin:8px 0 4px;font-weight:600;color:#6b5526">俯仰角（唯一可调项）</div>
       <div class="g2">
         <div class="frow narrow"><label>边排俯仰</label><input type="number" id="l_til" value="${LG.tiltSide}" step="1"><span class="unit">°</span></div>
@@ -1709,14 +1760,22 @@ function bindInputs(){
   };
   num('l_rs', v=>LG.rowStart=Math.max(0,v));
   num('l_re', v=>LG.rowEnd=Math.max(0,v));
-  num('l_ah',v=>LG.aimH=v); num('l_w',v=>LG.watt=v);
+  num('l_ah',v=>LG.aimH=v);
   /* 型号下拉：选光束角 ⇒ 自动带出该型号的功率和光通量（三者绑定，不能拆） */
   const sel=(id,fn)=>{const el=document.getElementById(id);if(!el)return;
     el.addEventListener('change',()=>{fn(parseFloat(el.value));redraw();validate();save();renderPanel();});};
-  sel('l_bra',v=>{LG.beamRail=v; const f=fixtureOf(v); LG.watt=f.w; LG.lumen=f.lm;});
-  sel('l_bgn',v=>{LG.beamGen=v; const f=fixtureOf(v); LG.watt=f.w; LG.lumen=f.lm;});
+  /* 选光束角 ⇒ 带出该型号的功率与光通量。内排、外排各管各的，互不影响。 */
+  sel('l_bra',v=>{LG.beamRail=v; const f=fixtureOf(v,'rail'); LG.railWatt=f.w; LG.railLumen=f.lm;});
+  sel('l_bgn',v=>{LG.beamGen =v; const f=fixtureOf(v,'gen');  LG.genWatt =f.w; LG.genLumen =f.lm;});
   sel('l_bsp',v=>{LG.beamSpot=v;});
-  num('l_lm',v=>LG.lumen=Math.max(200,v));
+  num('l_lmw',v=>LG.genWatt =Math.max(1,v));
+  num('l_lmr',v=>LG.railWatt=Math.max(1,v));
+  num('l_lm',v=>LG.genLumen=Math.max(200,v));
+  num('l_lm2',v=>LG.railLumen=Math.max(200,v));
+  /* 勾选框：省掉房间门口两只 */
+  const chk=(id,fn)=>{const el=document.getElementById(id);
+    if(el) el.onchange=()=>{fn(el.checked);redraw();validate();save();renderPanel();};};
+  chk('l_drd',v=>LG.dropRoomDoor=v);
   num('l_til',v=>LG.tiltSide=Math.max(0,Math.min(LG.tiltMax,v)));
   num('l_tmax',v=>{LG.tiltMax=Math.max(5,Math.min(90,v));
                    LG.tiltSide=Math.min(LG.tiltSide,LG.tiltMax);});
@@ -1765,7 +1824,7 @@ function renderLightTableBody(){
 
   let h=`<div class="selname">灯位清单 · ${nR} 排 + 独立房间 + 镜前</div>
   <div class="selnote">灯具 ${ls.length} 只 ＝ 营业区 <b>${lsGrid.length}</b> 只（${nR} 排网格）＋ 独立房间 <b>${lsRoom.length}</b> 只 ＋ 镜前 <b>${lsMir.length}</b> 只。
-  开孔 ${LG.hole}mm，${LG.watt}W，Ra≥${LG.cri}。营业区主光 ${LG.cct}K，外边排离墙 ${LG.sideOff}，
+  开孔 ${LG.hole}mm，内排 ${LG.genWatt}W/${LG.beamGen}°、外排 ${LG.railWatt}W/${LG.beamRail}°，Ra≥${LG.cri}。营业区主光 ${LG.cct}K，外边排离墙 ${LG.sideOff}，
   排距 ${pitches.join('/')}（${nR} 排等距），外排 ${n} 列 × ${Math.round(step)}${nR===4?`，内排 ${innerCols.n} 列 × ${Math.round(innerCols.step)}`:''}。
   <b>卫生间和试衣间是砌体隔断的封闭房间，顶面独立，各自单独布灯 4000K、单独开关</b>，不走营业区网格。</div>`;
 
@@ -1838,7 +1897,7 @@ function renderLightTableBody(){
   <div class="sec">照度校核（流明法 E=Φ·N·UF·MF/A）</div>
   <table class="sched">
     <tr><th>区域</th><th>面积</th><th>照度</th><th>判定</th></tr>
-    <tr><td>营业区（${LMC.n_shop}只×${LG.lumen}lm）</td><td>${LMC.A_shop.toFixed(1)}m²</td>
+    <tr><td>营业区（${LMC.n_shop}只·内排${LG.genLumen}lm/外排${LG.railLumen}lm）</td><td>${LMC.A_shop.toFixed(1)}m²</td>
         <td>${Math.round(LMC.E_shop)}lx</td>
         <td>${LMC.E_shop>=300?'✓ ≥300（GB/T 50034 商店营业厅）':'✗ ＜300，需加功率'}</td></tr>
     ${LMC.rooms.map(r=>`<tr><td>${r.name}</td><td>${r.A.toFixed(2)}m²</td>
@@ -1866,7 +1925,7 @@ function renderLightTableBody(){
   两只房间灯不属于三排网格，也不参与"对齐"约束。${LG.cct}K 主光偏暖，房间用 <b>4000K</b> 更接近自然光，
   看肤色和衣服本色更准。</div>`;
 
-  const wAll = lsGrid.length*LG.watt + lsRoom.length*LG.roomWatt
+  const wAll = lsGrid.reduce((s,l)=>s+(l.watt||0),0) + lsRoom.reduce((s,l)=>s+(l.watt||0),0)
              + lsMir.filter(l=>l.zone==='美颜灯').length*LG.beautyWatt
              + lsMir.filter(l=>l.zone==='美衣灯').length*LG.clothWatt;
   h+=`<div class="tot">合计 <b>${ls.length} 只</b>（营业区 ${lsGrid.length} ＋ 房间 ${lsRoom.length} ＋ 镜前 ${lsMir.length}）· 总功率 <b>${wAll}W</b> · 单回路 16A 足够</div>`;
@@ -1891,7 +1950,7 @@ function renderLightTableBody(){
   · <b>灯数只多 4 只的窍门</b>：外排是 36° 窄光洗衣服，必须 ${Math.round(step)} 密排（光斑 ${Math.round(2*beamRadius(LG.beamRail))} 咬住 ${Math.round(step)}）；
     内排是 60° 泛光铺通道，长距 ${Math.round(innerCols.step)} 就够（光斑 ${Math.round(2*beamRadius(LG.beamGen))} 远超列距）。
     所以外排 ${n} 列、内排 ${innerCols.n} 列，营业区 ${lsGrid.length} 只而不是 ${nR*n} 只<br>
-  · <b>代价</b>：营业区 ${nShop0} 只 → ${lsGrid.length} 只，LPD 从 ${(nShop0*LG.watt/28.67).toFixed(1)} 涨到 ${(lsGrid.length*LG.watt/28.67).toFixed(1)} W/m²。
+  · <b>代价</b>：营业区 ${nShop0} 只 → ${lsGrid.length} 只，LPD 从 ${(nShop0*LG.genWatt/28.67).toFixed(1)} 涨到 ${(lsGrid.reduce((s,l)=>s+(l.watt||0),0)/28.67).toFixed(1)} W/m²。
     GB50034 商店营业厅照明功率密度限值约 9–11 W/m²（现行值按 300lx 档），四排略超，
     但这是为均匀度付的钱——照度标准是下限，暗带是硬伤<br>
   · <b>光束角是型号属性，装完不能调</b>：同一颗 COB 换反光杯才得到不同光束角，「18W/${LG.beamRail}°」是一个整体型号，采购一次报死。
@@ -1933,7 +1992,7 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     try{
-      localStorage.setItem(LS_KEY, JSON.stringify({v:12, SHOP, LG, ITEMS}));
+      localStorage.setItem(LS_KEY, JSON.stringify({v:13, SHOP, LG, ITEMS}));
       flash('已保存');
     }catch(e){}
   }, 400);
@@ -1999,7 +2058,7 @@ document.getElementById('btnCsv').onclick=()=>{
   computeLights().forEach((l,i)=>{
     const off=l.aimX!==undefined?Math.round(Math.abs(l.aimX-l.x)):'';
     rows.push([i+1,l.zone,Math.round(l.x),Math.round(l.y),off,
-      (/衣架/.test(l.zone)?LG.beamRail:(/模特|首饰|镜/.test(l.zone)?LG.beamSpot:LG.beamGen))+'°',LG.watt]);
+      (/衣架/.test(l.zone)?LG.beamRail:(/模特|首饰|镜/.test(l.zone)?LG.beamSpot:LG.beamGen))+'°',l.watt||LG.genWatt]);
   });
   rows.push([]);
   rows.push(['参数','吊顶'+SHOP.H,'开孔'+LG.hole+'mm','色温'+LG.cct+'K','Ra≥'+LG.cri,'俯仰'+tilt.toFixed(0)+'°','可调0-'+LG.tiltMax+'°']);
@@ -2007,7 +2066,7 @@ document.getElementById('btnCsv').onclick=()=>{
 };
 
 document.getElementById('btnJson').onclick=()=>{
-  dl(JSON.stringify({v:7,SHOP,LG,ITEMS},null,2),'CherryStudio_参数.json','application/json');
+  dl(JSON.stringify({v:8,SHOP,LG,ITEMS},null,2),'CherryStudio_参数.json','application/json');
 };
 
 document.getElementById('btnLoad').onclick=()=>{
